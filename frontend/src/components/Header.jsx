@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { UserCircle, ChevronDown, LogOut, Settings, User } from 'lucide-react';
@@ -8,8 +8,10 @@ const Header = () => {
     const navigate = useNavigate();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [profileImage, setProfileImage] = useState(null);
+    const dropdownRef = useRef(null);
 
     const handleLogout = async () => {
+        setDropdownOpen(false); // Закрываем меню перед выходом
         await logout();
         navigate('/login');
     };
@@ -21,6 +23,23 @@ const Header = () => {
     const toggleDropdown = () => {
         setDropdownOpen(!dropdownOpen);
     };
+
+    // Обработчик клика вне компонента
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setDropdownOpen(false);
+            }
+        }
+
+        // Добавляем обработчик события
+        document.addEventListener('mousedown', handleClickOutside);
+
+        // Очищаем обработчик события при размонтировании
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     useEffect(() => {
         if (user && user.profileImageUrl) {
@@ -42,6 +61,10 @@ const Header = () => {
                     URL.revokeObjectURL(profileImage);
                 }
             };
+        } else {
+            // Сбрасываем состояние при отсутствии пользователя
+            setProfileImage(null);
+            setDropdownOpen(false);
         }
     }, [user, getAuthenticatedImageUrl]);
 
@@ -55,7 +78,7 @@ const Header = () => {
                     Школьная система тестирования
                 </h1>
                 {user ? (
-                    <div className="relative flex items-center gap-4">
+                    <div className="relative flex items-center gap-4" ref={dropdownRef}>
                         <div
                             className="flex items-center gap-2 cursor-pointer hover:bg-white/10 py-1 px-2 rounded-lg transition-colors"
                             onClick={toggleDropdown}
@@ -83,16 +106,28 @@ const Header = () => {
                                     <p className="font-medium">{user.fullName}</p>
                                     <p className="text-sm text-gray-500">{user.email || 'Нет email'}</p>
                                 </div>
-                                <Link to="/profile" className="flex items-center gap-2 p-3 hover:bg-gray-100 transition-colors">
+                                <Link
+                                    to="/profile"
+                                    className="flex items-center gap-2 p-3 hover:bg-gray-100 transition-colors"
+                                    onClick={() => setDropdownOpen(false)} // Закрываем меню при переходе
+                                >
                                     <User className="w-4 h-4" />
                                     <span>Мой профиль</span>
                                 </Link>
-                                <Link to="/profile/settings" className="flex items-center gap-2 p-3 hover:bg-gray-100 transition-colors">
+                                <Link
+                                    to="/profile/settings"
+                                    className="flex items-center gap-2 p-3 hover:bg-gray-100 transition-colors"
+                                    onClick={() => setDropdownOpen(false)} // Закрываем меню при переходе
+                                >
                                     <Settings className="w-4 h-4" />
                                     <span>Настройки профиля</span>
                                 </Link>
                                 {user.role === 'ADMIN' && (
-                                    <Link to="/admin" className="flex items-center gap-2 p-3 hover:bg-gray-100 transition-colors">
+                                    <Link
+                                        to="/admin"
+                                        className="flex items-center gap-2 p-3 hover:bg-gray-100 transition-colors"
+                                        onClick={() => setDropdownOpen(false)} // Закрываем меню при переходе
+                                    >
                                         <Settings className="w-4 h-4" />
                                         <span>Админ панель</span>
                                     </Link>
