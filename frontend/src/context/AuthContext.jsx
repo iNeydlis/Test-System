@@ -86,6 +86,22 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('user');
         }
     };
+
+    // Новая функция для обновления информации о пользователе
+    const updateUserInfo = useCallback((updatedInfo) => {
+        if (!user) return;
+
+        // Создаем новый объект пользователя с обновленными данными
+        const updatedUser = {
+            ...user,
+            ...updatedInfo
+        };
+
+        // Обновляем состояние и localStorage
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+    }, [user]);
+
     // Добавим функцию для получения защищенных ресурсов
     const fetchWithAuth = useCallback(async (url, options = {}) => {
         if (!user || !user.token) {
@@ -118,8 +134,17 @@ export const AuthProvider = ({ children }) => {
             return null;
         }
     }, [fetchWithAuth]);
+
     return (
-        <AuthContext.Provider value={{ user,fetchWithAuth,getAuthenticatedImageUrl, login, logout, loading }}>
+        <AuthContext.Provider value={{
+            user,
+            fetchWithAuth,
+            getAuthenticatedImageUrl,
+            login,
+            logout,
+            loading,
+            updateUserInfo // Экспортируем новую функцию
+        }}>
             {children}
         </AuthContext.Provider>
     );

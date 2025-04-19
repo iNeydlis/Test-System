@@ -136,6 +136,7 @@ const ProfileSettings = () => {
                 confirmPassword: ''
             }));
         } catch (error) {
+            console.error("Ошибка при обновлении профиля:", error);
             setMessage({
                 type: 'error',
                 text: error.response?.data?.message || 'Ошибка при обновлении профиля'
