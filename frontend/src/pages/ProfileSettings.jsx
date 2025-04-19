@@ -4,7 +4,7 @@ import { Camera, Save, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 
 const ProfileSettings = () => {
-    const { user, updateUserInfo } = useContext(AuthContext);
+    const { user, updateUserInfo, getAuthenticatedImageUrl } = useContext(AuthContext);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [showPassword, setShowPassword] = useState(false);
@@ -23,11 +23,23 @@ const ProfileSettings = () => {
                 ...prev,
                 email: user.email || ''
             }));
-            if (user.profileImageUrl) {
-                setPreviewImage(user.profileImageUrl);
-            }
+
+            const loadImage = async () => {
+                if (user.profileImageUrl) {
+                    try {
+                        const imageUrl = await getAuthenticatedImageUrl(user.profileImageUrl);
+                        if (imageUrl) {
+                            setPreviewImage(imageUrl);
+                        }
+                    } catch (error) {
+                        console.error("Error loading profile image:", error);
+                    }
+                }
+            };
+
+            loadImage();
         }
-    }, [user]);
+    }, [user, getAuthenticatedImageUrl]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -50,27 +62,27 @@ const ProfileSettings = () => {
     };
 
     const uploadProfileImage = async () => {
-        if (!selectedFile || !user) return;
+        if (!selectedFile || !user) return null;
 
         const formData = new FormData();
         formData.append('file', selectedFile);
 
         try {
-            setLoading(true);
             const response = await axios.post('/api/profile/image', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                    'Authorization': user.token // Используем токен из объекта user
+                    'Authorization': user.token
                 }
             });
 
-            setMessage({ type: 'success', text: 'Изображение профиля успешно обновлено' });
-            updateUserInfo({ profileImageUrl: response.data.imagePath });
             setSelectedFile(null);
+            return response.data.imagePath;
         } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.message || 'Ошибка при загрузке изображения' });
-        } finally {
-            setLoading(false);
+            setMessage({
+                type: 'error',
+                text: error.response?.data?.message || 'Ошибка при загрузке изображения'
+            });
+            return null;
         }
     };
 
@@ -82,23 +94,39 @@ const ProfileSettings = () => {
 
         try {
             setLoading(true);
+            let updatedUserInfo = { email: profileData.email };
 
             // If new image is selected, upload it first
             if (selectedFile) {
-                await uploadProfileImage();
+                const imagePath = await uploadProfileImage();
+                if (imagePath) {
+                    updatedUserInfo.profileImageUrl = imagePath;
+                }
             }
 
             // Update profile info
-            const response = await axios.put('/api/profile', profileData, {
+            await axios.put('/api/profile', profileData, {
                 headers: {
-                    'Authorization': user.token // Используем токен из объекта user
+                    'Authorization': user.token
                 }
             });
 
-            setMessage({ type: 'success', text: 'Профиль успешно обновлен' });
+            // Update user context with new information
+            updateUserInfo(updatedUserInfo);
 
-            // Update user context with new email
-            updateUserInfo({ email: profileData.email });
+            // Get updated user profile to ensure we have the latest data
+            const profileResponse = await axios.get('/api/profile', {
+                headers: {
+                    'Authorization': user.token
+                }
+            });
+
+            if (profileResponse.data) {
+                // Update any additional fields returned from the backend
+                updateUserInfo(profileResponse.data);
+            }
+
+            setMessage({ type: 'success', text: 'Профиль успешно обновлен' });
 
             // Clear password fields
             setProfileData(prev => ({
@@ -108,7 +136,10 @@ const ProfileSettings = () => {
                 confirmPassword: ''
             }));
         } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.message || 'Ошибка при обновлении профиля' });
+            setMessage({
+                type: 'error',
+                text: error.response?.data?.message || 'Ошибка при обновлении профиля'
+            });
         } finally {
             setLoading(false);
         }

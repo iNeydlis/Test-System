@@ -1,12 +1,13 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { UserCircle, ChevronDown, LogOut, Settings, User } from 'lucide-react';
 
 const Header = () => {
-    const { user, logout } = useContext(AuthContext);
+    const { user, logout, getAuthenticatedImageUrl } = useContext(AuthContext);
     const navigate = useNavigate();
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [profileImage, setProfileImage] = useState(null);
 
     const handleLogout = async () => {
         await logout();
@@ -16,6 +17,29 @@ const Header = () => {
     const toggleDropdown = () => {
         setDropdownOpen(!dropdownOpen);
     };
+
+    useEffect(() => {
+        if (user && user.profileImageUrl) {
+            let isMounted = true;
+
+            const loadImage = async () => {
+                const imageUrl = await getAuthenticatedImageUrl(user.profileImageUrl);
+                if (isMounted && imageUrl) {
+                    setProfileImage(imageUrl);
+                }
+            };
+
+            loadImage();
+
+            return () => {
+                isMounted = false;
+                // Очищаем URL объекты
+                if (profileImage) {
+                    URL.revokeObjectURL(profileImage);
+                }
+            };
+        }
+    }, [user, getAuthenticatedImageUrl]);
 
     return (
         <header className="bg-gradient-blue text-white py-4 shadow-md">
@@ -27,9 +51,9 @@ const Header = () => {
                             className="flex items-center gap-2 cursor-pointer hover:bg-white/10 py-1 px-2 rounded-lg transition-colors"
                             onClick={toggleDropdown}
                         >
-                            {user.profileImageUrl ? (
+                            {user.profileImageUrl && profileImage ? (
                                 <img
-                                    src={user.profileImageUrl}
+                                    src={profileImage}
                                     alt={user.fullName}
                                     className="w-8 h-8 rounded-full object-cover border-2 border-white/50"
                                 />
