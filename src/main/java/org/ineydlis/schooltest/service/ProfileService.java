@@ -105,6 +105,15 @@ public class ProfileService {
             Files.createDirectories(uploadPath);
         }
 
+        // Удаление старого изображения, если оно существует
+        if (user.getProfileImagePath() != null && !user.getProfileImagePath().isEmpty()) {
+            String oldFilename = user.getProfileImagePath().substring(user.getProfileImagePath().lastIndexOf("/") + 1);
+            Path oldFilePath = uploadPath.resolve(oldFilename);
+            if (Files.exists(oldFilePath)) {
+                Files.delete(oldFilePath);
+            }
+        }
+
         // Генерация уникального имени файла
         String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
         Path filePath = uploadPath.resolve(filename);
