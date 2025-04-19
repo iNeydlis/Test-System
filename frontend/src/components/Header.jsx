@@ -14,6 +14,10 @@ const Header = () => {
         navigate('/login');
     };
 
+    const navigateToHome = () => {
+        navigate('/');
+    };
+
     const toggleDropdown = () => {
         setDropdownOpen(!dropdownOpen);
     };
@@ -44,7 +48,12 @@ const Header = () => {
     return (
         <header className="bg-gradient-blue text-white py-4 shadow-md">
             <div className="container mx-auto px-4 flex justify-between items-center">
-                <h1 className="text-xl font-bold">Школьная система тестирования</h1>
+                <h1
+                    className="text-xl font-bold cursor-pointer hover:text-white/80 transition-colors"
+                    onClick={navigateToHome}
+                >
+                    Школьная система тестирования
+                </h1>
                 {user ? (
                     <div className="relative flex items-center gap-4">
                         <div

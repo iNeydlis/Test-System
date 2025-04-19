@@ -52,7 +52,7 @@ const MainMenu = ({ user }) => {
 };
 
 const UserInfo = ({ user }) => {
-    const subjectsDisplay = user.subjects ? user.subjects.join(', ') : 'Не указаны';
+    const subjectsDisplay = user.subjectNames ? user.subjectNames.join(', ') : 'Не указаны';
 
     return (
         <div style={userInfoContainerStyle}>
