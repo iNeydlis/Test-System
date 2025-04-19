@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @tailwind base;
 @tailwind components;
@@ -15,143 +15,166 @@
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
+  font-family: 'Inter', 'Roboto', sans-serif; /* Added Inter as primary font */
+  background-color: #f8fafc; /* Lighter background for better contrast */
+  color: #1e293b; /* More modern text color */
+  line-height: 1.6; /* Improved readability */
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 2rem; /* Increased from 1rem for more breathing room */
+}
+
+/* Section spacing */
+section {
+  margin-bottom: 3rem; /* Add spacing between sections */
 }
 
 button {
   cursor: pointer;
-  padding: 0.5rem 1rem;
-  background-color: #3B82F6; /* Updated to match blue-500 from component */
+  padding: 0.625rem 1.25rem; /* Slightly more padding */
+  background-color: #3B82F6;
   color: white;
   border: none;
-  border-radius: 0.5rem; /* Updated to match rounded-lg from component */
-  font-size: 1rem;
-  transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500; /* Medium weight looks more modern */
+  transition: all 0.2s ease; /* Smoother transition */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Subtle shadow by default */
 }
 
 button:hover {
-  background-color: #2563EB; /* Updated to blue-600 */
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background-color: #2563EB;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); /* Colored shadow on hover */
 }
 
 button.secondary {
-  background-color: #6B7280; /* Updated to match gray-500 */
+  background-color: #64748B; /* Updated to slate-500 for better contrast */
+  color: white;
 }
 
 button.secondary:hover {
-  background-color: #4B5563; /* Updated to gray-600 */
+  background-color: #475569; /* Updated to slate-600 */
+  box-shadow: 0 4px 12px rgba(71, 85, 105, 0.2);
 }
 
 button.danger {
-  background-color: #EF4444; /* Updated to red-500 */
+  background-color: #EF4444;
 }
 
 button.danger:hover {
-  background-color: #DC2626; /* Updated to red-600 */
+  background-color: #DC2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
 }
 
 input, select {
-  padding: 0.5rem;
-  border: 1px solid #E5E7EB; /* Updated to gray-200 */
+  padding: 0.75rem 1rem; /* More generous padding */
+  border: 1px solid #E2E8F0; /* Updated to slate-200 */
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   width: 100%;
-  margin-bottom: 1rem;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  margin-bottom: 1.25rem; /* Increased from 1rem */
+  transition: all 0.2s ease;
+  background-color: white;
 }
 
 input:focus, select:focus {
   outline: none;
-  border-color: #93C5FD; /* Updated to match blue-200 */
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); /* Blue-500 with opacity */
+  border-color: #93C5FD;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); /* Softer, larger focus ring */
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem; /* Increased from 1rem */
 }
 
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
+  color: #334155; /* slate-700 for better readability */
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
-  border-radius: 0.5rem;
+  border-collapse: separate; /* Changed from collapse for better styling */
+  border-spacing: 0;
+  margin-bottom: 1.5rem; /* Increased from 1rem */
+  border-radius: 0.75rem; /* Increased from 0.5rem */
   overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 table th, table td {
-  padding: 0.75rem;
+  padding: 1rem 1.25rem; /* Increased padding */
   text-align: left;
-  border-bottom: 1px solid #E5E7EB; /* Updated to gray-200 */
+  border-bottom: 1px solid #E2E8F0; /* Updated to slate-200 */
 }
 
 table th {
-  background-color: #F9FAFB; /* Updated to gray-50 */
+  background-color: #F8FAFC; /* Updated to slate-50 */
   font-weight: 600;
+  color: #334155; /* slate-700 */
+}
+
+table tr:last-child td {
+  border-bottom: none; /* Remove bottom border for last row */
 }
 
 table tr:hover {
-  background-color: #EFF6FF; /* Added blue-50 background on hover */
+  background-color: #EFF6FF;
 }
 
-/* Card styles to match your React components */
+/* Card styles with improved spacing */
 .card {
   background-color: white;
-  border-radius: 0.75rem;
+  border-radius: 1rem; /* Increased from 0.75rem */
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: none;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 1.5rem; /* Add spacing between cards */
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .card-header {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #E5E7EB;
+  padding: 1.5rem 1.75rem; /* Increased from 1.25rem 1.5rem */
+  border-bottom: 1px solid #E2E8F0; /* Updated to slate-200 */
 }
 
 .card-content {
-  padding: 1.5rem;
+  padding: 1.75rem; /* Increased from 1.5rem */
 }
 
 .card-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827; /* Updated to gray-900 */
+  color: #0F172A; /* Updated to slate-900 */
+  margin-bottom: 0.5rem; /* Add spacing below title */
 }
 
 .card-description {
-  color: #6B7280; /* Updated to gray-500 */
-  margin-top: 0.25rem;
+  color: #64748B; /* Updated to slate-500 */
+  margin-top: 0.5rem; /* Increased from 0.25rem */
+  line-height: 1.5; /* Improved readability */
 }
 
-/* Badge styles */
+/* Badge styles with better padding */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
+  padding: 0.25rem 0.75rem; /* Increased from 0.125rem 0.5rem */
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.2; /* Improved readability */
   color: white;
   white-space: nowrap;
 }
@@ -159,10 +182,11 @@ table tr:hover {
 /* Progress bar styles */
 .progress {
   width: 100%;
-  height: 0.625rem;
+  height: 0.75rem; /* Increased from 0.625rem */
   background-color: rgba(0, 0, 0, 0.05);
   border-radius: 9999px;
   overflow: hidden;
+  margin: 1rem 0; /* Add vertical spacing */
 }
 
 .progress-value {
@@ -171,19 +195,20 @@ table tr:hover {
   transition: width 0.3s ease;
 }
 
-/* Tab styles */
+/* Tab styles with improved spacing */
 .tabs {
   display: flex;
   flex-direction: column;
   width: 100%;
+  margin-bottom: 2rem; /* Add bottom spacing */
 }
 
 .tabs-list {
   display: flex;
-  background-color: #F3F4F6; /* Updated to gray-100 */
-  border-radius: 0.5rem;
-  padding: 0.25rem;
-  margin-bottom: 1.5rem;
+  background-color: #F1F5F9; /* Updated to slate-100 */
+  border-radius: 0.75rem; /* Increased from 0.5rem */
+  padding: 0.375rem; /* Increased from 0.25rem */
+  margin-bottom: 2rem; /* Increased from 1.5rem */
 }
 
 .tabs-trigger {
@@ -191,22 +216,22 @@ table tr:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1.25rem; /* Increased from 0.75rem 1rem */
   font-size: 0.875rem;
   font-weight: 500;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem; /* Consistent with other elements */
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .tabs-trigger[data-state="active"] {
   background-color: white;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Slightly stronger shadow */
 }
 
-/* Color Variables - Updated to match your component */
+/* Color Variables - Updated for better aesthetics */
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.98 0 0); /* Slightly off-white for better contrast */
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -230,7 +255,7 @@ table tr:hover {
   --chart-3: oklch(0.398 0.07 227.392); /* Amber - average */
   --chart-4: oklch(0.828 0.189 84.429); /* Red - poor */
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
+  --radius: 0.75rem; /* Increased from 0.625rem */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -240,23 +265,23 @@ table tr:hover {
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Add these new color variables to match your React component */
+  /* Updated component specific colors */
   --color-excellent: #10B981; /* Green */
-  --color-good: #3B82F6;      /* Blue */
-  --color-average: #F59E0B;   /* Amber/Orange */
-  --color-poor: #EF4444;      /* Red */
+  --color-good: #3B82F6; /* Blue */
+  --color-average: #F59E0B; /* Amber/Orange */
+  --color-poor: #EF4444; /* Red */
 
   /* Gradient backgrounds */
-  --gradient-blue: linear-gradient(to right, #3B82F6, #4F46E5);
-  --gradient-blue-light: linear-gradient(to right, #EFF6FF, #EEF2FF);
+  --gradient-blue: linear-gradient(135deg, #3B82F6, #4F46E5); /* Changed angle for more modern look */
+  --gradient-blue-light: linear-gradient(135deg, #EFF6FF, #EEF2FF);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.13 0 0); /* Slightly darker for better contrast */
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
+  --card: oklch(0.16 0 0); /* Slightly lighter than background for layering */
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
+  --popover: oklch(0.16 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.205 0 0);
@@ -287,16 +312,16 @@ table tr:hover {
 
   /* Dark mode adjustments for component specific colors */
   --color-excellent: #059669; /* Darker green */
-  --color-good: #2563EB;      /* Darker blue */
-  --color-average: #D97706;   /* Darker amber */
-  --color-poor: #DC2626;      /* Darker red */
+  --color-good: #2563EB; /* Darker blue */
+  --color-average: #D97706; /* Darker amber */
+  --color-poor: #DC2626; /* Darker red */
 
   /* Dark mode gradient backgrounds */
-  --gradient-blue: linear-gradient(to right, #1D4ED8, #4338CA);
-  --gradient-blue-light: linear-gradient(to right, #1E3A8A20, #3730A320);
+  --gradient-blue: linear-gradient(135deg, #1D4ED8, #4338CA);
+  --gradient-blue-light: linear-gradient(135deg, #1E3A8A20, #3730A320);
 }
 
-/* Additional utility classes for your component */
+/* Additional utility classes with improved styles */
 .bg-gradient-blue {
   background: var(--gradient-blue);
 }
@@ -305,11 +330,11 @@ table tr:hover {
   background: var(--gradient-blue-light);
 }
 
-/* Skeleton loading styles */
+/* Skeleton loading styles with smoother animation */
 .skeleton {
   background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
   background-size: 200% 100%;
-  animation: 1.5s shine linear infinite;
+  animation: 1.8s shine linear infinite; /* Slightly slower for smoother effect */
   border-radius: 0.5rem;
 }
 
@@ -319,23 +344,64 @@ table tr:hover {
   }
 }
 
-/* Add specific styles for the Lucide icons */
+/* Icon styles with improved alignment */
 .lucide {
-  display: inline-block;
-  vertical-align: middle;
+  display: inline-flex;
+  vertical-align: text-bottom;
+  margin-right: 0.375rem; /* Add spacing after icons when used with text */
 }
 
-/* Additional shadows */
+/* Updated shadows */
 .shadow-inner {
-  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 2px 6px 0 rgba(0, 0, 0, 0.05);
 }
 
 .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 10px -1px rgba(0, 0, 0, 0.1), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Layout helper classes */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Consistent spacing */
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem; /* Consistent spacing */
+  align-items: center;
+}
+
+/* Add padding utility classes */
+.p-section {
+  padding: 2.5rem; /* Generous section padding */
+}
+
+.p-card {
+  padding: 1.75rem; /* Card padding */
+}
+
+.p-content {
+  padding: 1.25rem; /* Content block padding */
+}
+
+/* Add margin utility classes */
+.mb-section {
+  margin-bottom: 3rem; /* Section bottom margin */
+}
+
+.mb-card {
+  margin-bottom: 1.5rem; /* Card bottom margin */
+}
+
+.mb-content {
+  margin-bottom: 1.25rem; /* Content block bottom margin */
 }
 
 @theme inline {
@@ -386,14 +452,17 @@ table tr:hover {
   }
 }
 
-/* Additional styles for Statistics page-specific components */
-.bg-white\/10 {
-  background-color: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
+/* Enhanced glass effects for statistics page */
+.bg-glass {
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius);
 }
 
-.bg-white\/20 {
-  background-color: rgba(255, 255, 255, 0.2);
+.dark .bg-glass {
+  background-color: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Progress component custom styling */
@@ -403,4 +472,34 @@ table tr:hover {
 
 .progress-value {
   background-color: var(--progress-background);
+}
+
+/* Content spacing helpers */
+.content-container {
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.content-section {
+  margin-bottom: 3rem;
+}
+
+/* Improved nav/sidebar spacing */
+.sidebar-content {
+  padding: 1.5rem;
+}
+
+.nav-item {
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.dark .nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
 }
