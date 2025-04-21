@@ -141,7 +141,34 @@ public class TestController {
         TestDto test = testService.getTestWithQuestions(testId, currentUser.getId(), includeAnswers);
         return ResponseEntity.ok(test);
     }
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TestDto> createTestWithoutFile(
+            @RequestBody TestCreateRequest request,
+            @RequestHeader("Authorization") String token) {
+        User currentUser = authService.getCurrentUser(token);
+        if (currentUser.getRole() != UserRole.TEACHER && currentUser.getRole() != UserRole.ADMIN) {
+            throw new RuntimeException("У вас нет прав на создание тестов");
+        }
 
+        TestDto createdTest = testService.createTest(request, null, currentUser.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdTest);
+    }
+
+    @PutMapping(value = "/{testId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TestDto> updateTestWithoutFile(
+            @PathVariable Long testId,
+            @RequestBody TestCreateRequest request,
+            @RequestParam(value = "removeReferenceMaterials", required = false, defaultValue = "false") boolean removeReferenceMaterials,
+            @RequestHeader("Authorization") String token) {
+        User currentUser = authService.getCurrentUser(token);
+
+        if (currentUser.getRole() != UserRole.TEACHER && currentUser.getRole() != UserRole.ADMIN) {
+            throw new RuntimeException("У вас нет прав на редактирование тестов");
+        }
+
+        TestDto updatedTest = testService.updateTest(testId, request, null, removeReferenceMaterials, currentUser.getId());
+        return ResponseEntity.ok(updatedTest);
+    }
     // Update a test
     @PutMapping(value = "/{testId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TestDto> updateTest(
