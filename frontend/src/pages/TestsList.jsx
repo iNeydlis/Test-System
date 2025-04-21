@@ -78,13 +78,12 @@ const TestsList = () => {
         }
     };
 
-    // Handle download reference materials
-    const handleDownloadReferenceMaterials = async (testId, filename) => {
+    const handleViewReferenceMaterials = async (testId) => {
         try {
-            await TestService.downloadReferenceMaterials(testId, filename);
+            await TestService.viewReferenceMaterials(testId);
         } catch (err) {
-            console.error("Error downloading reference materials:", err);
-            setError("Ошибка при загрузке справочных материалов: " + (err.message || 'Произошла ошибка'));
+            console.error("Error viewing reference materials:", err);
+            setError("Ошибка при просмотре справочных материалов: " + (err.message || 'Произошла ошибка'));
         }
     };
 
@@ -214,7 +213,7 @@ const TestsList = () => {
                             )}
                         </div>
                         <button
-                            onClick={() => handleDownloadReferenceMaterials(test.id, test.referenceMaterialsFilename)}
+                            onClick={() => handleViewReferenceMaterials(test.id)}
                             style={{
                                 backgroundColor: '#1976D2',
                                 color: 'white',
@@ -225,7 +224,7 @@ const TestsList = () => {
                                 fontSize: '12px'
                             }}
                         >
-                            Скачать
+                            Просмотреть
                         </button>
                     </div>
                 )}

@@ -136,6 +136,88 @@ class TestService {
             throw error;
         });
     }
+    viewReferenceMaterials(testId) {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        modal.style.zIndex = '1000';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+
+        const closeButton = document.createElement('button');
+        closeButton.innerText = 'Закрыть';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '20px';
+        closeButton.style.right = '20px';
+        closeButton.style.padding = '10px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.onclick = () => document.body.removeChild(modal);
+
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '80%';
+        iframe.style.height = '80%';
+        iframe.style.border = 'none';
+
+        api.get(`/tests/${testId}/reference-materials`, {
+            responseType: 'blob',
+            headers: {
+                'Accept': 'application/pdf'
+            }
+        }).then(blob => {
+            // Логируем для диагностики
+            console.log('Received blob:', blob);
+            console.log('Blob type:', blob.type);
+            console.log('Blob size:', blob.size);
+
+            // Проверяем, является ли blob объектом Blob
+            if (!(blob instanceof Blob)) {
+                throw new Error(`Получен не Blob, тип: ${typeof blob}`);
+            }
+
+            // Проверяем размер
+            if (blob.size === 0) {
+                throw new Error('Получен пустой файл');
+            }
+
+            // Проверяем первые байты
+            blob.arrayBuffer().then(buffer => {
+                const firstBytes = new Uint8Array(buffer.slice(0, 5));
+                console.log('First 5 bytes:', String.fromCharCode(...firstBytes));
+            }).catch(err => {
+                console.error('Ошибка чтения первых байт:', err);
+            });
+
+            // Проверяем тип
+            if (!blob.type.includes('application/pdf')) {
+                throw new Error(`Некорректный тип данных: ${blob.type}`);
+            }
+
+            const url = URL.createObjectURL(blob);
+            iframe.src = url;
+        }).catch(error => {
+            console.error('Ошибка загрузки PDF:', error);
+            if (error.response) {
+                console.error('Error response:', error.response.status, error.response.data);
+            } else if (error.request) {
+                console.error('No response received:', error.request);
+                console.error('Possible CORS issue: Check Access-Control-Allow-Origin header');
+            } else {
+                console.error('Error setting up request:', error.message);
+            }
+            iframe.srcdoc = `<h1>Ошибка загрузки документа</h1><p>${error.message || 'Не удалось загрузить PDF'}</p>`;
+        });
+
+        modal.appendChild(closeButton);
+        modal.appendChild(iframe);
+        document.body.appendChild(modal);
+
+        return Promise.resolve(true);
+    }
 
 }
 
