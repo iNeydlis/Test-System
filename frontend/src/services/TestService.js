@@ -101,6 +101,42 @@ class TestService {
     getTeacherSubjectsAndGrades() {
         return api.get('/teacher/subjects-and-grades');
     }
+    createTestWithFile(formData) {
+        return api.post('/tests', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    }
+    updateTestWithFile(testId, formData, removeReferenceMaterials = false) {
+        return api.put(`/tests/${testId}?removeReferenceMaterials=${removeReferenceMaterials}`,
+            formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            }
+        );
+    }
+    downloadReferenceMaterials(testId, filename) {
+        return api.get(`/tests/${testId}/reference-materials`, {
+            responseType: 'blob'
+        }).then(response => {
+            // Create a blob URL and trigger download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename || 'reference-materials');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            return true;
+        }).catch(error => {
+            console.error('Error downloading reference materials:', error);
+            throw error;
+        });
+    }
+
 }
 
 export default new TestService();

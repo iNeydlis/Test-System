@@ -78,6 +78,16 @@ const TestsList = () => {
         }
     };
 
+    // Handle download reference materials
+    const handleDownloadReferenceMaterials = async (testId, filename) => {
+        try {
+            await TestService.downloadReferenceMaterials(testId, filename);
+        } catch (err) {
+            console.error("Error downloading reference materials:", err);
+            setError("Ошибка при загрузке справочных материалов: " + (err.message || 'Произошла ошибка'));
+        }
+    };
+
     // Add defensive programming - ensure tests is always treated as an array
     const renderTests = () => {
         const testsArray = Array.isArray(tests) ? tests : [];
@@ -140,6 +150,10 @@ const TestsList = () => {
             if (percentage >= 60) return '3 (удовлетворительно)';
             return '2 (неудовлетворительно)';
         };
+
+        // Check if test has reference materials
+        const hasReferenceMaterials = test.hasReferenceMaterials || test.referenceMaterialsFilename;
+
         return (
             <div
                 key={test.id}
@@ -170,6 +184,51 @@ const TestsList = () => {
                 <p><strong>Описание:</strong> {test.description || 'Нет описания'}</p>
                 <p><strong>Вопросов:</strong> {(test.questionsToShow && test.questionsToShow >= 1) ? test.questionsToShow : test.questionCount || '0'}</p>
                 <p><strong>Макс. попыток:</strong> {test.maxAttempts || '1'}</p>
+
+                {/* Display reference materials information */}
+                {hasReferenceMaterials && (
+                    <div style={{
+                        backgroundColor: '#e3f2fd',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        marginTop: '8px',
+                        marginBottom: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                    }}>
+                        <div>
+            <span style={{
+                color: '#1976D2',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center'
+            }}>
+                <span style={{ marginRight: '5px' }}>📄</span>
+                Справочные материалы
+            </span>
+                            {test.referenceMaterialsFilename && (
+                                <span style={{ fontSize: '12px', color: '#555' }}>
+                    {test.referenceMaterialsFilename}
+                </span>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => handleDownloadReferenceMaterials(test.id, test.referenceMaterialsFilename)}
+                            style={{
+                                backgroundColor: '#1976D2',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                            }}
+                        >
+                            Скачать
+                        </button>
+                    </div>
+                )}
 
                 {/* Добавленная информация для учеников */}
                 {user?.role === 'STUDENT' && (

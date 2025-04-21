@@ -8,7 +8,6 @@ const TestForm = () => {
     const navigate = useNavigate();
     const isEditing = !!testId;
 
-
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -16,8 +15,8 @@ const TestForm = () => {
         timeLimit: 60,
         gradeIds: [],
         questions: [],
-        maxAttempts: 1,         // Added maxAttempts field
-        questionsToShow: null   // Added questionsToShow field
+        maxAttempts: 1,
+        questionsToShow: null
     });
 
     const [subjects, setSubjects] = useState([]);
@@ -26,6 +25,12 @@ const TestForm = () => {
     const [error, setError] = useState(null);
     const { user } = useContext(AuthContext);
     const isAdmin = user && user.role === 'ADMIN';
+
+    // New state for file upload
+    const [referenceMaterials, setReferenceMaterials] = useState(null);
+    const [removeReferenceMaterials, setRemoveReferenceMaterials] = useState(false);
+    const [currentReferenceMaterialsName, setCurrentReferenceMaterialsName] = useState('');
+    const [fileError, setFileError] = useState(null);
 
     useEffect(() => {
         const fetchSubjectsAndGrades = async () => {
@@ -73,6 +78,11 @@ const TestForm = () => {
                         setError("У вас нет доступа к редактированию вопросов этого теста");
                         navigate('/tests');
                         return;
+                    }
+
+                    // Check if test has reference materials
+                    if (testData.hasReferenceMaterials) {
+                        setCurrentReferenceMaterialsName(testData.referenceMaterialsName || 'Дополнительные материалы');
                     }
 
                     // Обработка классов
@@ -133,6 +143,41 @@ const TestForm = () => {
         }));
     };
 
+    // Handle file input change
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        setFileError(null);
+
+        if (file) {
+            // Check if the file is a PDF
+            if (file.type !== 'application/pdf') {
+                setFileError('Пожалуйста, загрузите только PDF файл');
+                setReferenceMaterials(null);
+                e.target.value = null;
+                return;
+            }
+
+            // Check file size (limit to 10MB for example)
+            if (file.size > 10 * 1024 * 1024) {
+                setFileError('Файл слишком большой. Максимальный размер 10MB');
+                setReferenceMaterials(null);
+                e.target.value = null;
+                return;
+            }
+
+            setReferenceMaterials(file);
+            setRemoveReferenceMaterials(false);
+        }
+    };
+
+    // Handle removing current file
+    const handleRemoveFile = () => {
+        setReferenceMaterials(null);
+        setRemoveReferenceMaterials(true);
+        // Reset file input if there's one
+        const fileInput = document.getElementById('referenceMaterials');
+        if (fileInput) fileInput.value = '';
+    };
 
     const handleGradeChange = (e) => {
         const gradeId = parseInt(e.target.value);
@@ -299,6 +344,7 @@ const TestForm = () => {
         try {
             setLoading(true);
             setError(null);
+            setFileError(null);
 
             // Form validation
             if (!formData.title.trim()) {
@@ -399,10 +445,33 @@ const TestForm = () => {
                 }))
             };
 
-            if (isEditing) {
-                await TestService.updateTest(testId, testCreateRequest);
+            // Determine if we should use the multipart/form-data endpoint
+            // based on whether a reference material exists or needs to be removed
+            if (referenceMaterials || removeReferenceMaterials) {
+                // Create form data object
+                const formDataObj = new FormData();
+                formDataObj.append('test', new Blob([JSON.stringify(testCreateRequest)], { type: 'application/json' }));
+
+                if (referenceMaterials) {
+                    formDataObj.append('referenceMaterials', referenceMaterials);
+                }
+
+                if (isEditing) {
+                    await TestService.updateTestWithFile(
+                        testId,
+                        formDataObj,
+                        removeReferenceMaterials
+                    );
+                } else {
+                    await TestService.createTestWithFile(formDataObj);
+                }
             } else {
-                await TestService.createTest(testCreateRequest);
+                // Use JSON endpoint if no file operations
+                if (isEditing) {
+                    await TestService.updateTest(testId, testCreateRequest);
+                } else {
+                    await TestService.createTest(testCreateRequest);
+                }
             }
 
             navigate('/tests');
@@ -481,6 +550,56 @@ const TestForm = () => {
                             rows="3"
                             className="form-control"
                         />
+                    </div>
+
+                    {/* PDF File Upload */}
+                    <div className="form-group">
+                        <label htmlFor="referenceMaterials">Дополнительные материалы (PDF)</label>
+                        <input
+                            id="referenceMaterials"
+                            name="referenceMaterials"
+                            type="file"
+                            accept="application/pdf"
+                            onChange={handleFileChange}
+                            className="form-control"
+                        />
+                        <small className="form-text text-muted">
+                            Загрузите PDF-файл с дополнительными материалами к тесту (максимум 10MB)
+                        </small>
+
+                        {fileError && (
+                            <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                                {fileError}
+                            </div>
+                        )}
+
+                        {currentReferenceMaterialsName && !removeReferenceMaterials && (
+                            <div style={{ marginTop: '0.5rem' }}>
+                                <span>Текущий файл: {currentReferenceMaterialsName}</span>
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveFile}
+                                    className="btn btn-sm btn-danger ml-2"
+                                    style={{ marginLeft: '10px' }}
+                                >
+                                    Удалить
+                                </button>
+                            </div>
+                        )}
+
+                        {referenceMaterials && (
+                            <div style={{ marginTop: '0.5rem' }}>
+                                <span>Выбран новый файл: {referenceMaterials.name}</span>
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveFile}
+                                    className="btn btn-sm btn-danger ml-2"
+                                    style={{ marginLeft: '10px' }}
+                                >
+                                    Отменить
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="form-group">
