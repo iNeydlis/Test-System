@@ -4,16 +4,27 @@ import org.ineydlis.schooltest.dto.*;
 import org.ineydlis.schooltest.model.*;
 import org.ineydlis.schooltest.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class TestService {
+    @Value("${app.upload.dir:${user.home}/uploads/materials}")
+    private String uploadDir;
     @Autowired
     private TestRepository testRepository;
 
@@ -29,12 +40,118 @@ public class TestService {
     @Autowired
     private UserRepository userRepository;
 
+    private void createUploadDirectoryIfNeeded() {
+        try {
+            Path dirPath = Paths.get(uploadDir);
+            if (!Files.exists(dirPath)) {
+                Files.createDirectories(dirPath);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Не удалось создать директорию для загрузки файлов", e);
+        }
+    }
+    private String generateUniqueFilename(Long testId, String originalFilename) {
+        return "test_" + testId + "_" + System.currentTimeMillis() + "_" + originalFilename;
+    }
+
+    private void saveReferenceMaterials(Test test, MultipartFile file) {
+        if (file != null && !file.isEmpty()) {
+            try {
+                createUploadDirectoryIfNeeded();
+
+                // Generate a unique filename
+                String filename = generateUniqueFilename(test.getId(), file.getOriginalFilename());
+                Path targetLocation = Paths.get(uploadDir).resolve(filename);
+
+                // Copy the file to the target location
+                Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+                // Set the reference materials properties
+                test.setReferenceMaterialsFilename(file.getOriginalFilename());
+                test.setReferenceMaterialsPath(filename);
+            } catch (IOException e) {
+                throw new RuntimeException("Не удалось сохранить файл справочных материалов", e);
+            }
+        }
+    }
+
+
     @Autowired
     private TestResultRepository testResultRepository;
+    private void deleteReferenceMaterials(Test test) {
+        if (test.getReferenceMaterialsPath() != null) {
+            try {
+                Path filePath = Paths.get(uploadDir).resolve(test.getReferenceMaterialsPath());
+                Files.deleteIfExists(filePath);
+
+                // Clear the reference materials properties
+                test.setReferenceMaterialsFilename(null);
+                test.setReferenceMaterialsPath(null);
+            } catch (IOException e) {
+                throw new RuntimeException("Не удалось удалить файл справочных материалов", e);
+            }
+        }
+    }
+
+    public Resource getReferenceMaterialsFile(Long testId, Long userId) {
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> new RuntimeException("Тест не найден"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+
+        // Check permissions
+        if (user.getRole() == UserRole.STUDENT) {
+            // Students can only access active tests for their grade
+            if (!test.isActive() || !test.getAvailableGrades().contains(user.getGrade())) {
+                throw new RuntimeException("У вас нет доступа к этому тесту");
+            }
+        } else if (user.getRole() == UserRole.TEACHER) {
+            // Teachers can only access their own tests or tests for subjects they teach
+            boolean isCreator = test.getCreator().getId().equals(userId);
+            boolean teachesSubject = user.getSubjects().stream()
+                    .anyMatch(s -> s.getId().equals(test.getSubject().getId()));
+
+            if (!isCreator && !teachesSubject) {
+                throw new RuntimeException("У вас нет доступа к этому тесту");
+            }
+        } else if (user.getRole() != UserRole.ADMIN) {
+            throw new RuntimeException("У вас нет прав на доступ к справочным материалам");
+        }
+
+        // Check if test has reference materials
+        if (test.getReferenceMaterialsPath() == null) {
+            throw new RuntimeException("У этого теста нет справочных материалов");
+        }
+
+        try {
+            Path filePath = Paths.get(uploadDir).resolve(test.getReferenceMaterialsPath());
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists()) {
+                return resource;
+            } else {
+                throw new RuntimeException("Файл справочных материалов не найден");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Не удалось получить файл справочных материалов", e);
+        }
+    }
+
+    public String getReferenceMaterialsFilename(Long testId) {
+        Test test = testRepository.findById(testId)
+                .orElseThrow(() -> new RuntimeException("Тест не найден"));
+
+        if (test.getReferenceMaterialsFilename() == null) {
+            return "reference-material.pdf";
+        }
+
+        return test.getReferenceMaterialsFilename();
+    }
 
     // For teachers: Create a new test
     @Transactional
-    public TestDto createTest(TestCreateRequest request, Long creatorId) {
+    public TestDto createTest(TestCreateRequest request,MultipartFile referenceMaterials, Long creatorId) {
         User creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
@@ -95,6 +212,11 @@ public class TestService {
         }
 
         Test savedTest = testRepository.save(test);
+
+        if (referenceMaterials != null && !referenceMaterials.isEmpty()) {
+            saveReferenceMaterials(savedTest, referenceMaterials);
+            testRepository.save(savedTest);
+        }
 
         // Create questions and answers
         if (request.getQuestions() != null) {
@@ -255,7 +377,7 @@ public class TestService {
 
     // Update a test (for teachers and admins)
     @Transactional
-    public TestDto updateTest(Long testId, TestCreateRequest request, Long userId) {
+    public TestDto updateTest(Long testId, TestCreateRequest request,MultipartFile referenceMaterials, boolean removeReferenceMaterials,  Long userId) {
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new RuntimeException("Тест не найден"));
 
@@ -295,7 +417,19 @@ public class TestService {
                     .collect(Collectors.toSet());
             test.setAvailableGrades(grades);
         }
+        if (removeReferenceMaterials) {
+            // Delete existing reference materials
+            deleteReferenceMaterials(test);
+        }
 
+        if (referenceMaterials != null && !referenceMaterials.isEmpty()) {
+            // Delete old reference materials if they exist
+            if (test.getReferenceMaterialsPath() != null) {
+                deleteReferenceMaterials(test);
+            }
+            // Save new reference materials
+            saveReferenceMaterials(test, referenceMaterials);
+        }
         // Clear and update questions
         questionRepository.deleteAll(test.getQuestions());
         test.getQuestions().clear();
@@ -340,6 +474,10 @@ public class TestService {
             throw new RuntimeException("Вы можете полностью удалять только свои тесты");
         } else if (user.getRole() != UserRole.ADMIN && user.getRole() != UserRole.TEACHER) {
             throw new RuntimeException("У вас нет прав на полное удаление тестов");
+        }
+
+        if (test.getReferenceMaterialsPath() != null) {
+            deleteReferenceMaterials(test);
         }
 
         // Find and delete all test results associated with this test

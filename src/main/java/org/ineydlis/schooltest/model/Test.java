@@ -63,5 +63,11 @@ public class Test {
 
     @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Question> questions = new ArrayList<>();
+
+    @Column(name = "reference_materials_filename")
+    private String referenceMaterialsFilename;
+
+    @Column(name = "reference_materials_path")
+    private String referenceMaterialsPath;
 }
 

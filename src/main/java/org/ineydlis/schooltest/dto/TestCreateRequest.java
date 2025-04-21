@@ -3,6 +3,7 @@ package org.ineydlis.schooltest.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
@@ -19,4 +20,6 @@ public class TestCreateRequest {
     private List<QuestionDto> questions;
     private Integer maxAttempts = 1; // Default to 1 attempt
     private Integer questionsToShow;
+    private MultipartFile referenceMaterials;
+    private boolean removeReferenceMaterials;
 }

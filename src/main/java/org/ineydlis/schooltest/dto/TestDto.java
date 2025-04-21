@@ -37,6 +37,8 @@ public class TestDto {
     private Double bestScorePercentage; // Процент лучшего результата для правильного сравнения
     private List<QuestionDto> questions;
     private Integer questionsToShow;
+    private String referenceMaterialsFilename;
+    private boolean hasReferenceMaterials;
 
     public static TestDto fromEntity(Test test) {
         return TestDto.builder()
@@ -66,6 +68,8 @@ public class TestDto {
                 .remainingAttempts(null) // Значение по умолчанию или из другого источника
                 .bestScorePercentage(null) // Будет заполнено в методе getTestsForStudent
                 .questionsToShow(test.getQuestionsToShow())
+                .hasReferenceMaterials(test.getReferenceMaterialsPath() != null)
+                .referenceMaterialsFilename(test.getReferenceMaterialsFilename())
                 .build();
     }
 }

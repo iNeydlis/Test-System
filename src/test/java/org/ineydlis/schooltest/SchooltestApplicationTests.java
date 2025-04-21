@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -100,9 +101,9 @@ public class SchooltestApplicationTests {
         when(subjectRepository.findById(1L)).thenReturn(Optional.of(testSubject));
         when(gradeRepository.findById(1L)).thenReturn(Optional.of(testGrade));
         when(testRepository.save(any(org.ineydlis.schooltest.model.Test.class))).thenReturn(testTest);
-
+        MultipartFile referenceMaterials = null;
         // Действие
-        TestDto result = testService.createTest(request, 1L);
+        TestDto result = testService.createTest(request,referenceMaterials, 1L);
 
         // Проверка
         assertNotNull(result);

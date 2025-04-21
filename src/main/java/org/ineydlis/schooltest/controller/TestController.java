@@ -6,16 +6,18 @@ import org.ineydlis.schooltest.model.UserRole;
 import org.ineydlis.schooltest.service.AuthService;
 import org.ineydlis.schooltest.service.TestService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+import org.springframework.core.io.Resource;
 @RestController
 @RequestMapping("/api/tests")
 public class TestController {
@@ -39,16 +41,18 @@ public class TestController {
 
 
     // Create a new test
-    @PostMapping
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TestDto> createTest(
-            @RequestBody TestCreateRequest request,
+            @RequestPart("test") TestCreateRequest request,
+            @RequestPart(value = "referenceMaterials", required = false) MultipartFile referenceMaterials,
             @RequestHeader("Authorization") String token) {
         User currentUser = authService.getCurrentUser(token);
         if (currentUser.getRole() != UserRole.TEACHER && currentUser.getRole() != UserRole.ADMIN) {
             throw new RuntimeException("У вас нет прав на создание тестов");
         }
 
-        TestDto createdTest = testService.createTest(request, currentUser.getId());
+        TestDto createdTest = testService.createTest(request, referenceMaterials, currentUser.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTest);
     }
 
@@ -71,6 +75,24 @@ public class TestController {
 
         return ResponseEntity.ok(tests);
     }
+
+    @GetMapping("/{testId}/reference-materials")
+    public ResponseEntity<Resource> getReferenceMaterials(
+            @PathVariable Long testId,
+            @RequestHeader("Authorization") String token) {
+        User currentUser = authService.getCurrentUser(token);
+
+        // Get the reference materials resource
+        Resource resource = testService.getReferenceMaterialsFile(testId, currentUser.getId());
+
+        // Get the original filename
+        String filename = testService.getReferenceMaterialsFilename(testId);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(resource);
+    }
+
     @GetMapping("/result/{resultId}")
     public ResponseEntity<TestResultDetailsDto> getTestResultDetails(
             @PathVariable Long resultId,
@@ -121,10 +143,12 @@ public class TestController {
     }
 
     // Update a test
-    @PutMapping("/{testId}")
+    @PutMapping(value = "/{testId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TestDto> updateTest(
             @PathVariable Long testId,
-            @RequestBody TestCreateRequest request,
+            @RequestPart("test") TestCreateRequest request,
+            @RequestPart(value = "referenceMaterials", required = false) MultipartFile referenceMaterials,
+            @RequestParam(value = "removeReferenceMaterials", required = false, defaultValue = "false") boolean removeReferenceMaterials,
             @RequestHeader("Authorization") String token) {
         User currentUser = authService.getCurrentUser(token);
 
@@ -132,7 +156,7 @@ public class TestController {
             throw new RuntimeException("У вас нет прав на редактирование тестов");
         }
 
-        TestDto updatedTest = testService.updateTest(testId, request, currentUser.getId());
+        TestDto updatedTest = testService.updateTest(testId, request, referenceMaterials, removeReferenceMaterials, currentUser.getId());
         return ResponseEntity.ok(updatedTest);
     }
 
