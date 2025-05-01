@@ -173,6 +173,7 @@ const TestResultsList = () => {
             [studentId]: !prev[studentId]
         }));
     };
+
 // Get sorted and filtered results
     const filteredAndSortedResults = useMemo(() => {
         // First apply search filter
@@ -247,7 +248,7 @@ const TestResultsList = () => {
 
         return sortedResults;
     }, [results, sortConfig, searchTerm, filterStatus, user?.role]);
-    //Группировка результатов по студентам для учителей
+
     // Группировка результатов по студентам для учителей
     const studentResultsMap = useMemo(() => {
         if (user?.role !== 'TEACHER' && user?.role !== 'ADMIN') {
@@ -320,7 +321,36 @@ const TestResultsList = () => {
         return filteredMap;
     }, [results, searchTerm, filterStatus, user?.role]);
 
+    const sortedStudentEntries = useMemo(() => {
+        if (!studentResultsMap) return [];
+        const entries = Object.entries(studentResultsMap);
+        return entries.sort((a, b) => {
+            const studentA = a[1]; // Данные студента A
+            const studentB = b[1]; // Данные студента B
 
+            if (sortConfig.key === 'name') {
+                const nameA = studentA.studentName.toLowerCase();
+                const nameB = studentB.studentName.toLowerCase();
+                return sortConfig.direction === 'asc'
+                    ? nameA.localeCompare(nameB)
+                    : nameB.localeCompare(nameA);
+            }
+
+            if (sortConfig.key === 'completedAt') {
+                const dateA = studentA.results[0]?.completedAt ? new Date(studentA.results[0].completedAt).getTime() : 0;
+                const dateB = studentB.results[0]?.completedAt ? new Date(studentB.results[0].completedAt).getTime() : 0;
+                return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+            }
+
+            if (sortConfig.key === 'percentage') {
+                const percentageA = getResultPercentage(studentA.results[0]);
+                const percentageB = getResultPercentage(studentB.results[0]);
+                return sortConfig.direction === 'asc' ? percentageA - percentageB : percentageB - percentageA;
+            }
+
+            return 0;
+        });
+    }, [studentResultsMap, sortConfig]);
 
     // Для группировки результатов (упрощено, без группировки по статусу и дате)
     const groupedResults = useMemo(() => {
@@ -403,9 +433,7 @@ const TestResultsList = () => {
 
     return (
         <div>
-            <h2>
-                {testId ? `Результаты теста "${test?.title || ''}"` : 'Результаты тестов'}
-            </h2>
+
 
             {/* Control panel */}
             <div style={styles.controlPanel}>
@@ -481,59 +509,43 @@ const TestResultsList = () => {
                             <thead>
                             <tr>
                                 <th style={{...styles.tableHeader, width: '40px'}}></th>
-                                <th
-                                    style={styles.tableHeader}
-                                    onClick={() => requestSort('name')}
-                                >
+                                <th style={styles.tableHeader} onClick={() => requestSort('name')}>
                                     Ученик
                                     <span style={styles.sortIcon('name')}>
-                                            {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
-                                        </span>
+                        {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
+                    </span>
                                 </th>
-                                <th
-                                    style={styles.tableHeader}
-                                    onClick={() => requestSort('completedAt')}
-                                >
+                                <th style={styles.tableHeader} onClick={() => requestSort('completedAt')}>
                                     Дата
                                     <span style={styles.sortIcon('completedAt')}>
-                                            {sortConfig.key === 'completedAt' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
-                                        </span>
+                        {sortConfig.key === 'completedAt' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
+                    </span>
                                 </th>
-                                <th
-                                    style={{...styles.tableHeader, textAlign: 'center'}}
-                                    onClick={() => requestSort('percentage')}
-                                >
+                                <th style={{...styles.tableHeader, textAlign: 'center'}} onClick={() => requestSort('percentage')}>
                                     Результат
                                     <span style={styles.sortIcon('percentage')}>
-                                            {sortConfig.key === 'percentage' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
-                                        </span>
+                        {sortConfig.key === 'percentage' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
+                    </span>
                                 </th>
-                                <th style={{...styles.tableHeader, textAlign: 'center'}}>
-                                    Статус
-                                </th>
-                                <th style={{...styles.tableHeader, textAlign: 'center'}}>
-                                    Действия
-                                </th>
+                                <th style={{...styles.tableHeader, textAlign: 'center'}}>Статус</th>
+                                <th style={{...styles.tableHeader, textAlign: 'center'}}>Действия</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {Object.entries(studentResultsMap).map(([studentKey, studentData]) => {
+                            {sortedStudentEntries.map(([studentKey, studentData]) => {
                                 const allResults = studentData.results;
-                                const bestResult = allResults[0]; // Первый результат уже отсортирован как лучший
+                                const bestResult = allResults[0];
                                 const hasMultipleResults = allResults.length > 1;
                                 const isExpanded = expandedStudents[studentKey];
 
-                                // Get percentage for the best result
                                 const hasScoreData = typeof bestResult.score !== 'undefined' && typeof bestResult.maxScore !== 'undefined';
                                 const bestPercentage = hasScoreData
                                     ? calculateScorePercentage(bestResult.score, bestResult.maxScore)
                                     : calculatePercentage(bestResult.correctAnswers, bestResult.totalQuestions);
-
                                 const status = getStatusClass(bestPercentage);
 
                                 return (
                                     <React.Fragment key={studentKey}>
-                                        {/* Строка с лучшим результатом */}
                                         <tr style={styles.bestResultRow}>
                                             <td style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid #eee' }}>
                                                 {hasMultipleResults && (
@@ -546,20 +558,12 @@ const TestResultsList = () => {
                                                     </button>
                                                 )}
                                             </td>
-                                            <td style={{
-                                                padding: '1rem',
-                                                borderBottom: '1px solid #eee',
-                                                fontWeight: 'bold'
-                                            }}>
+                                            <td style={{ padding: '1rem', borderBottom: '1px solid #eee', fontWeight: 'bold' }}>
                                                 {studentData.studentName}
                                                 {hasMultipleResults && (
-                                                    <span style={{
-                                                        fontSize: '0.8rem',
-                                                        color: '#666',
-                                                        marginLeft: '0.5rem'
-                                                    }}>
-                                                            (лучший из {allResults.length})
-                                                        </span>
+                                                    <span style={{ fontSize: '0.8rem', color: '#666', marginLeft: '0.5rem' }}>
+                                        (лучший из {allResults.length})
+                                    </span>
                                                 )}
                                             </td>
                                             <td style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
@@ -570,32 +574,18 @@ const TestResultsList = () => {
                                                     ? `${bestResult.score} / ${bestResult.maxScore} (${bestPercentage}%)`
                                                     : `${bestResult.correctAnswers || 0} / ${bestResult.totalQuestions || 0} (${bestPercentage}%)`}
                                             </td>
-                                            <td style={{
-                                                padding: '1rem',
-                                                textAlign: 'center',
-                                                borderBottom: '1px solid #eee',
-                                                color: status.color,
-                                                fontWeight: 'bold'
-                                            }}>
+                                            <td style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #eee', color: status.color, fontWeight: 'bold' }}>
                                                 {status.text}
                                             </td>
                                             <td style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
                                                 <Link
                                                     to={`/tests/teacher-result/${bestResult.id}`}
-                                                    style={{
-                                                        backgroundColor: '#2196F3',
-                                                        color: 'white',
-                                                        padding: '0.5rem 1rem',
-                                                        borderRadius: '4px',
-                                                        textDecoration: 'none'
-                                                    }}
+                                                    style={{ backgroundColor: '#2196F3', color: 'white', padding: '0.5rem 1rem', borderRadius: '4px', textDecoration: 'none' }}
                                                 >
                                                     Подробнее
                                                 </Link>
                                             </td>
                                         </tr>
-
-                                        {/* Дополнительные результаты при разворачивании */}
                                         {isExpanded && hasMultipleResults && allResults.slice(1).map((result, index) => {
                                             const resultPercentage = getResultPercentage(result);
                                             const resultStatus = getStatusClass(resultPercentage);
@@ -605,9 +595,9 @@ const TestResultsList = () => {
                                                 <tr key={`${studentKey}-${index}`} style={styles.otherResultRow}>
                                                     <td style={{ borderBottom: '1px solid #eee' }}></td>
                                                     <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #eee', paddingLeft: '2rem' }}>
-                                                            <span style={{ fontSize: '0.9rem', color: '#666' }}>
-                                                                Попытка #{index + 2}
-                                                            </span>
+                                        <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                                            Попытка #{index + 2}
+                                        </span>
                                                     </td>
                                                     <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #eee' }}>
                                                         {result.completedAt ? new Date(result.completedAt).toLocaleString() : '-'}
@@ -615,27 +605,15 @@ const TestResultsList = () => {
                                                     <td style={{ padding: '0.75rem 1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
                                                         {hasScoreData
                                                             ? `${result.score} / ${result.maxScore} (${resultPercentage}%)`
-                                                            : `${result.correctAnswers || 0} / ${result.totalQuestions || this.total || 0} (${resultPercentage}%)`}
+                                                            : `${result.correctAnswers || 0} / ${result.totalQuestions || 0} (${resultPercentage}%)`}
                                                     </td>
-                                                    <td style={{
-                                                        padding: '0.75rem 1rem',
-                                                        textAlign: 'center',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: resultStatus.color
-                                                    }}>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center', borderBottom: '1px solid #eee', color: resultStatus.color }}>
                                                         {resultStatus.text}
                                                     </td>
                                                     <td style={{ padding: '0.75rem 1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
                                                         <Link
                                                             to={`/tests/teacher-result/${result.id}`}
-                                                            style={{
-                                                                backgroundColor: '#9E9E9E',
-                                                                color: 'white',
-                                                                padding: '0.25rem 0.75rem',
-                                                                borderRadius: '4px',
-                                                                textDecoration: 'none',
-                                                                fontSize: '0.9rem'
-                                                            }}
+                                                            style={{ backgroundColor: '#9E9E9E', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '4px', textDecoration: 'none', fontSize: '0.9rem' }}
                                                         >
                                                             Подробнее
                                                         </Link>
