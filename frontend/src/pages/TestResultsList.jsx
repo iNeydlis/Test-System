@@ -18,6 +18,9 @@ const TestResultsList = () => {
     const [groupBy, setGroupBy] = useState('none');
     const [filterStatus, setFilterStatus] = useState('all');
 
+    // Состояние для отслеживания развернутых учеников
+    const [expandedStudents, setExpandedStudents] = useState({});
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -132,10 +135,25 @@ const TestResultsList = () => {
 
     // Function to get percentage for a result
     const getResultPercentage = (result) => {
-        const hasScoreData = typeof result.score !== 'undefined' && typeof result.maxScore !== 'undefined';
-        return hasScoreData
-            ? calculateScorePercentage(result.score, result.maxScore)
-            : calculatePercentage(result.correctAnswers, result.totalQuestions);
+        if (!result) return 0;
+
+        // Check if we have score data
+        const hasScoreData = typeof result.score !== 'undefined' &&
+            typeof result.maxScore !== 'undefined' &&
+            result.maxScore > 0;
+
+        // Check if we have correctAnswers data
+        const hasAnswersData = typeof result.correctAnswers !== 'undefined' &&
+            typeof result.totalQuestions !== 'undefined' &&
+            result.totalQuestions > 0;
+
+        if (hasScoreData) {
+            return calculateScorePercentage(result.score, result.maxScore);
+        } else if (hasAnswersData) {
+            return calculatePercentage(result.correctAnswers, result.totalQuestions);
+        } else {
+            return 0; // Default if no valid data available
+        }
     };
 
     // Handle sorting
@@ -144,21 +162,34 @@ const TestResultsList = () => {
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
         }
+        console.log(`Sorting by ${key} in ${direction} direction`);
         setSortConfig({ key, direction });
     };
 
-    // Get sorted and filtered results
+    // Функция для переключения состояния развернутости студента
+    const toggleStudentExpand = (studentId) => {
+        setExpandedStudents(prev => ({
+            ...prev,
+            [studentId]: !prev[studentId]
+        }));
+    };
+// Get sorted and filtered results
     const filteredAndSortedResults = useMemo(() => {
         // First apply search filter
-        let filteredResults = [...results];
+        let filteredResults = [...results].filter(result => result !== null && typeof result === 'object');
 
         if (searchTerm) {
             const searchLower = searchTerm.toLowerCase();
             filteredResults = filteredResults.filter(result => {
-                const testTitle = (result.testTitle || result.test?.title || '').toLowerCase();
-                const studentName = (result.studentName || result.student?.name || '').toLowerCase();
-                const searchTarget = user?.role === 'STUDENT' ? testTitle : studentName;
-                return searchTarget.includes(searchLower);
+                if (user?.role === 'STUDENT') {
+                    // For students, search in test titles
+                    const testTitle = (result.testTitle || result.test?.title || '').toLowerCase();
+                    return testTitle.includes(searchLower);
+                } else {
+                    // For teachers/admins, search in student names
+                    const studentName = (result.studentName || result.student?.name || '').toLowerCase();
+                    return studentName.includes(searchLower);
+                }
             });
         }
 
@@ -175,8 +206,9 @@ const TestResultsList = () => {
         }
 
         // Then sort
-        return filteredResults.sort((a, b) => {
+        const sortedResults = [...filteredResults].sort((a, b) => {
             if (sortConfig.key === 'name') {
+                // For students, sort by test title; for teachers, sort by student name
                 const nameA = user?.role === 'STUDENT'
                     ? (a.testTitle || a.test?.title || '').toLowerCase()
                     : (a.studentName || a.student?.name || '').toLowerCase();
@@ -184,77 +216,123 @@ const TestResultsList = () => {
                     ? (b.testTitle || b.test?.title || '').toLowerCase()
                     : (b.studentName || b.student?.name || '').toLowerCase();
 
-                if (sortConfig.direction === 'asc') {
-                    return nameA.localeCompare(nameB);
-                } else {
-                    return nameB.localeCompare(nameA);
-                }
+                return sortConfig.direction === 'asc'
+                    ? nameA.localeCompare(nameB)
+                    : nameB.localeCompare(nameA);
             }
 
             if (sortConfig.key === 'completedAt') {
                 const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
                 const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
 
-                if (sortConfig.direction === 'asc') {
-                    return dateA - dateB;
-                } else {
-                    return dateB - dateA;
-                }
+                return sortConfig.direction === 'asc'
+                    ? dateA - dateB
+                    : dateB - dateA;
             }
 
             if (sortConfig.key === 'percentage') {
                 const percentageA = getResultPercentage(a);
                 const percentageB = getResultPercentage(b);
 
-                if (sortConfig.direction === 'asc') {
-                    return percentageA - percentageB;
-                } else {
-                    return percentageB - percentageA;
-                }
+                return sortConfig.direction === 'asc'
+                    ? percentageA - percentageB
+                    : percentageB - percentageA;
             }
 
             return 0;
         });
+
+        console.log("Sorted results:", sortedResults);
+        console.log("Sort config:", sortConfig);
+
+        return sortedResults;
     }, [results, sortConfig, searchTerm, filterStatus, user?.role]);
-
-    // For grouping results
-    const groupedResults = useMemo(() => {
-        if (groupBy === 'none') {
-            return { 'Все результаты': filteredAndSortedResults };
+    //Группировка результатов по студентам для учителей
+    // Группировка результатов по студентам для учителей
+    const studentResultsMap = useMemo(() => {
+        if (user?.role !== 'TEACHER' && user?.role !== 'ADMIN') {
+            return null;
         }
 
-        const groups = {};
+        // Начнем с исходных результатов, чтобы правильно группировать
+        const map = {};
+        const filteredMap = {};
 
-        if (groupBy === 'status') {
-            filteredAndSortedResults.forEach(result => {
-                const percentage = getResultPercentage(result);
-                const status = getStatusClass(percentage).text;
-                if (!groups[status]) groups[status] = [];
-                groups[status].push(result);
+        // Сначала сгруппируем все результаты по студентам
+        results.forEach(result => {
+            if (!result) return;
+
+            const studentId = result.studentId || result.student?.id;
+            const studentName = result.studentName || result.student?.name || 'Неизвестно';
+
+            // Если у нас нет идентификатора студента, используем имя как ключ
+            const key = studentId ? studentId.toString() : `name-${studentName}`;
+
+            if (!map[key]) {
+                map[key] = {
+                    studentId: studentId,
+                    studentName: studentName,
+                    results: []
+                };
+            }
+
+            map[key].results.push(result);
+        });
+
+        // Сортируем результаты для каждого студента по проценту
+        Object.keys(map).forEach(key => {
+            map[key].results.sort((a, b) => {
+                const percentageA = getResultPercentage(a);
+                const percentageB = getResultPercentage(b);
+                return percentageB - percentageA; // По убыванию (лучший результат первый)
             });
-        } else if (groupBy === 'date') {
-            filteredAndSortedResults.forEach(result => {
-                if (!result.completedAt) {
-                    if (!groups['Без даты']) groups['Без даты'] = [];
-                    groups['Без даты'].push(result);
-                    return;
+        });
+
+        // Применяем поиск по имени студента
+        Object.keys(map).forEach(key => {
+            const studentData = map[key];
+            const studentName = studentData.studentName.toLowerCase();
+
+            if (!searchTerm || studentName.includes(searchTerm.toLowerCase())) {
+                // Применяем фильтрацию по статусу только к студентам, подходящим под поиск
+                if (filterStatus === 'all') {
+                    // Если не фильтруем по статусу, добавляем студента
+                    filteredMap[key] = studentData;
+                } else {
+                    // Проверяем, что лучший результат студента соответствует фильтру статуса
+                    const bestResult = studentData.results[0];
+                    const percentage = getResultPercentage(bestResult);
+
+                    let matchesFilter = false;
+
+                    if (filterStatus === 'excellent' && percentage >= 90) matchesFilter = true;
+                    else if (filterStatus === 'good' && percentage >= 75 && percentage < 90) matchesFilter = true;
+                    else if (filterStatus === 'satisfactory' && percentage >= 60 && percentage < 75) matchesFilter = true;
+                    else if (filterStatus === 'unsatisfactory' && percentage < 60) matchesFilter = true;
+
+                    if (matchesFilter) {
+                        filteredMap[key] = studentData;
+                    }
                 }
+            }
+        });
 
-                const date = new Date(result.completedAt);
-                const formattedDate = `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1).toString().padStart(2, '0')}.${date.getFullYear()}`;
+        return filteredMap;
+    }, [results, searchTerm, filterStatus, user?.role]);
 
-                if (!groups[formattedDate]) groups[formattedDate] = [];
-                groups[formattedDate].push(result);
-            });
-        }
 
-        return groups;
-    }, [filteredAndSortedResults, groupBy]);
+
+    // Для группировки результатов (упрощено, без группировки по статусу и дате)
+    const groupedResults = useMemo(() => {
+        // Всегда возвращаем один объект с ключом 'Все результаты'
+        return { 'Все результаты': filteredAndSortedResults };
+    }, [filteredAndSortedResults]);
 
     // Debug: Check results state
     console.log("Current results state:", results);
     console.log("Results length:", results.length);
     console.log("Filtered and sorted results:", filteredAndSortedResults);
+    console.log("Student results map:", studentResultsMap);
 
     // Styles for UI components
     const styles = {
@@ -298,16 +376,35 @@ const TestResultsList = () => {
             borderBottom: '1px solid #eee',
             borderTop: '1px solid #eee',
             marginTop: '1rem'
+        },
+        expandButton: {
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '1.2rem',
+            color: '#2196F3',
+            marginRight: '0.5rem'
+        },
+        studentRow: {
+            backgroundColor: '#f9f9f9'
+        },
+        bestResultRow: {
+            fontWeight: 'bold'
+        },
+        otherResultRow: {
+            backgroundColor: '#f5f5f5'
         }
     };
 
     if (loading) return <div>Загрузка результатов...</div>;
     if (error) return <div className="error-message">{error}</div>;
 
+
+
     return (
         <div>
             <h2>
-                {`Результаты теста`}
+                {testId ? `Результаты теста "${test?.title || ''}"` : 'Результаты тестов'}
             </h2>
 
             {/* Control panel */}
@@ -332,6 +429,7 @@ const TestResultsList = () => {
                         value={`${sortConfig.key}-${sortConfig.direction}`}
                         onChange={(e) => {
                             const [key, direction] = e.target.value.split('-');
+                            console.log(`Dropdown sort: ${key} ${direction}`);
                             setSortConfig({ key, direction });
                         }}
                     >
@@ -344,19 +442,7 @@ const TestResultsList = () => {
                     </select>
                 </div>
 
-                <div>
-                    <label htmlFor="group">Группировка:</label>
-                    <select
-                        id="group"
-                        style={styles.select}
-                        value={groupBy}
-                        onChange={(e) => setGroupBy(e.target.value)}
-                    >
-                        <option value="none">Без группировки</option>
-                        <option value="status">По статусу</option>
-                        <option value="date">По дате</option>
-                    </select>
-                </div>
+
 
                 <div>
                     <label htmlFor="filter">Статус:</label>
@@ -375,93 +461,114 @@ const TestResultsList = () => {
                 </div>
             </div>
 
-            {/* Debug info */}
-            <div style={{ marginBottom: '1rem', color: 'gray', fontSize: '0.9rem' }}>
-                Загружено результатов: {results.length} | Показано: {filteredAndSortedResults.length}
-            </div>
+
 
             {filteredAndSortedResults.length === 0 ? (
                 <p>Нет доступных результатов{searchTerm ? ' по вашему запросу' : ''}.</p>
             ) : (
                 <div>
-                    {Object.entries(groupedResults).map(([groupName, groupItems]) => (
-                        <div key={groupName}>
-                            {groupBy !== 'none' && groupItems.length > 0 && (
-                                <div style={styles.groupHeader}>{groupName} ({groupItems.length})</div>
-                            )}
-
-                            <table style={{
-                                width: '100%',
-                                backgroundColor: 'white',
-                                borderRadius: '8px',
-                                boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-                                borderCollapse: 'collapse',
-                                marginTop: groupBy === 'none' ? '1.5rem' : '0.5rem',
-                                marginBottom: '1.5rem'
-                            }}>
-                                <thead>
-                                <tr>
-                                    <th
-                                        style={styles.tableHeader}
-                                        onClick={() => requestSort('name')}
-                                    >
-                                        {user?.role === 'STUDENT' ? 'Тест' : 'Ученик'}
-                                        <span style={styles.sortIcon('name')}>
+                    {/* Отображение для учителей с группировкой по ученикам */}
+                    {studentResultsMap ? (
+                        <table style={{
+                            width: '100%',
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+                            borderCollapse: 'collapse',
+                            marginTop: '1.5rem',
+                            marginBottom: '1.5rem'
+                        }}>
+                            <thead>
+                            <tr>
+                                <th style={{...styles.tableHeader, width: '40px'}}></th>
+                                <th
+                                    style={styles.tableHeader}
+                                    onClick={() => requestSort('name')}
+                                >
+                                    Ученик
+                                    <span style={styles.sortIcon('name')}>
                                             {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
                                         </span>
-                                    </th>
-                                    <th
-                                        style={styles.tableHeader}
-                                        onClick={() => requestSort('completedAt')}
-                                    >
-                                        Дата
-                                        <span style={styles.sortIcon('completedAt')}>
+                                </th>
+                                <th
+                                    style={styles.tableHeader}
+                                    onClick={() => requestSort('completedAt')}
+                                >
+                                    Дата
+                                    <span style={styles.sortIcon('completedAt')}>
                                             {sortConfig.key === 'completedAt' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
                                         </span>
-                                    </th>
-                                    <th
-                                        style={{...styles.tableHeader, textAlign: 'center'}}
-                                        onClick={() => requestSort('percentage')}
-                                    >
-                                        Результат
-                                        <span style={styles.sortIcon('percentage')}>
+                                </th>
+                                <th
+                                    style={{...styles.tableHeader, textAlign: 'center'}}
+                                    onClick={() => requestSort('percentage')}
+                                >
+                                    Результат
+                                    <span style={styles.sortIcon('percentage')}>
                                             {sortConfig.key === 'percentage' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
                                         </span>
-                                    </th>
-                                    <th style={{...styles.tableHeader, textAlign: 'center'}}>
-                                        Статус
-                                    </th>
-                                    <th style={{...styles.tableHeader, textAlign: 'center'}}>
-                                        Действия
-                                    </th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {groupItems.map((result) => {
-                                    console.log("Processing result in render:", result);
+                                </th>
+                                <th style={{...styles.tableHeader, textAlign: 'center'}}>
+                                    Статус
+                                </th>
+                                <th style={{...styles.tableHeader, textAlign: 'center'}}>
+                                    Действия
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {Object.entries(studentResultsMap).map(([studentKey, studentData]) => {
+                                const allResults = studentData.results;
+                                const bestResult = allResults[0]; // Первый результат уже отсортирован как лучший
+                                const hasMultipleResults = allResults.length > 1;
+                                const isExpanded = expandedStudents[studentKey];
 
-                                    // Use score and maxScore for percentage if available, otherwise use correctAnswers/totalQuestions
-                                    const hasScoreData = typeof result.score !== 'undefined' && typeof result.maxScore !== 'undefined';
-                                    const percentage = hasScoreData
-                                        ? calculateScorePercentage(result.score, result.maxScore)
-                                        : calculatePercentage(result.correctAnswers, result.totalQuestions);
+                                // Get percentage for the best result
+                                const hasScoreData = typeof bestResult.score !== 'undefined' && typeof bestResult.maxScore !== 'undefined';
+                                const bestPercentage = hasScoreData
+                                    ? calculateScorePercentage(bestResult.score, bestResult.maxScore)
+                                    : calculatePercentage(bestResult.correctAnswers, bestResult.totalQuestions);
 
-                                    const status = getStatusClass(percentage);
+                                const status = getStatusClass(bestPercentage);
 
-                                    return (
-                                        <tr key={result.id}>
-                                            <td style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
-                                                {user?.role === 'STUDENT'
-                                                    ? (result.testTitle || result.test?.title || 'Без названия')
-                                                    : (result.studentName || result.student?.name || 'Неизвестно')}
+                                return (
+                                    <React.Fragment key={studentKey}>
+                                        {/* Строка с лучшим результатом */}
+                                        <tr style={styles.bestResultRow}>
+                                            <td style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid #eee' }}>
+                                                {hasMultipleResults && (
+                                                    <button
+                                                        style={styles.expandButton}
+                                                        onClick={() => toggleStudentExpand(studentKey)}
+                                                        title={isExpanded ? "Свернуть результаты" : "Показать все результаты"}
+                                                    >
+                                                        {isExpanded ? '−' : '+'}
+                                                    </button>
+                                                )}
+                                            </td>
+                                            <td style={{
+                                                padding: '1rem',
+                                                borderBottom: '1px solid #eee',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {studentData.studentName}
+                                                {hasMultipleResults && (
+                                                    <span style={{
+                                                        fontSize: '0.8rem',
+                                                        color: '#666',
+                                                        marginLeft: '0.5rem'
+                                                    }}>
+                                                            (лучший из {allResults.length})
+                                                        </span>
+                                                )}
                                             </td>
                                             <td style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
-                                                {result.completedAt ? new Date(result.completedAt).toLocaleString() : '-'}
+                                                {bestResult.completedAt ? new Date(bestResult.completedAt).toLocaleString() : '-'}
                                             </td>
                                             <td style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
                                                 {hasScoreData
-                                                    ? `${result.score} / ${result.maxScore} (${percentage}%)`
-                                                    : `${result.correctAnswers || 0} / ${result.totalQuestions || 0} (${percentage}%)`}
+                                                    ? `${bestResult.score} / ${bestResult.maxScore} (${bestPercentage}%)`
+                                                    : `${bestResult.correctAnswers || 0} / ${bestResult.totalQuestions || 0} (${bestPercentage}%)`}
                                             </td>
                                             <td style={{
                                                 padding: '1rem',
@@ -474,9 +581,7 @@ const TestResultsList = () => {
                                             </td>
                                             <td style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
                                                 <Link
-                                                    to={user?.role === 'STUDENT'
-                                                        ? `/tests/result/${result.id}`
-                                                        : `/tests/teacher-result/${result.id}`}
+                                                    to={`/tests/teacher-result/${bestResult.id}`}
                                                     style={{
                                                         backgroundColor: '#2196F3',
                                                         color: 'white',
@@ -489,12 +594,174 @@ const TestResultsList = () => {
                                                 </Link>
                                             </td>
                                         </tr>
-                                    );
-                                })}
-                                </tbody>
-                            </table>
-                        </div>
-                    ))}
+
+                                        {/* Дополнительные результаты при разворачивании */}
+                                        {isExpanded && hasMultipleResults && allResults.slice(1).map((result, index) => {
+                                            const resultPercentage = getResultPercentage(result);
+                                            const resultStatus = getStatusClass(resultPercentage);
+                                            const hasScoreData = typeof result.score !== 'undefined' && typeof result.maxScore !== 'undefined';
+
+                                            return (
+                                                <tr key={`${studentKey}-${index}`} style={styles.otherResultRow}>
+                                                    <td style={{ borderBottom: '1px solid #eee' }}></td>
+                                                    <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #eee', paddingLeft: '2rem' }}>
+                                                            <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                                                                Попытка #{index + 2}
+                                                            </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #eee' }}>
+                                                        {result.completedAt ? new Date(result.completedAt).toLocaleString() : '-'}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
+                                                        {hasScoreData
+                                                            ? `${result.score} / ${result.maxScore} (${resultPercentage}%)`
+                                                            : `${result.correctAnswers || 0} / ${result.totalQuestions || this.total || 0} (${resultPercentage}%)`}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '0.75rem 1rem',
+                                                        textAlign: 'center',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: resultStatus.color
+                                                    }}>
+                                                        {resultStatus.text}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
+                                                        <Link
+                                                            to={`/tests/teacher-result/${result.id}`}
+                                                            style={{
+                                                                backgroundColor: '#9E9E9E',
+                                                                color: 'white',
+                                                                padding: '0.25rem 0.75rem',
+                                                                borderRadius: '4px',
+                                                                textDecoration: 'none',
+                                                                fontSize: '0.9rem'
+                                                            }}
+                                                        >
+                                                            Подробнее
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </React.Fragment>
+                                );
+                            })}
+                            </tbody>
+                        </table>
+                    ) : (
+                        // Стандартное отображение (для студентов или без группировки по ученикам)
+                        Object.entries(groupedResults).map(([groupName, groupItems]) => (
+                            <div key={groupName}>
+                                {groupBy !== 'none' && groupItems.length > 0 && (
+                                    <div style={styles.groupHeader}>{groupName} ({groupItems.length})</div>
+                                )}
+
+                                <table style={{
+                                    width: '100%',
+                                    backgroundColor: 'white',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+                                    borderCollapse: 'collapse',
+                                    marginTop: groupBy === 'none' ? '1.5rem' : '0.5rem',
+                                    marginBottom: '1.5rem'
+                                }}>
+                                    <thead>
+                                    <tr>
+                                        <th
+                                            style={styles.tableHeader}
+                                            onClick={() => requestSort('name')}
+                                        >
+                                            {user?.role === 'STUDENT' ? 'Тест' : 'Ученик'}
+                                            <span style={styles.sortIcon('name')}>
+                                                {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
+                                            </span>
+                                        </th>
+                                        <th
+                                            style={styles.tableHeader}
+                                            onClick={() => requestSort('completedAt')}
+                                        >
+                                            Дата
+                                            <span style={styles.sortIcon('completedAt')}>
+                                                {sortConfig.key === 'completedAt' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
+                                            </span>
+                                        </th>
+                                        <th
+                                            style={{...styles.tableHeader, textAlign: 'center'}}
+                                            onClick={() => requestSort('percentage')}
+                                        >
+                                            Результат
+                                            <span style={styles.sortIcon('percentage')}>
+                                                {sortConfig.key === 'percentage' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '⇅'}
+                                            </span>
+                                        </th>
+                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>
+                                            Статус
+                                        </th>
+                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>
+                                            Действия
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {groupItems.map((result) => {
+                                        console.log("Processing result in render:", result);
+
+                                        // Use score and maxScore for percentage if available, otherwise use correctAnswers/totalQuestions
+                                        const hasScoreData = typeof result.score !== 'undefined' && typeof result.maxScore !== 'undefined';
+                                        const percentage = hasScoreData
+                                            ? calculateScorePercentage(result.score, result.maxScore)
+                                            : calculatePercentage(result.correctAnswers, result.totalQuestions);
+
+                                        const status = getStatusClass(percentage);
+
+                                        return (
+                                            <tr key={result.id}>
+                                                <td style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
+                                                    {user?.role === 'STUDENT'
+                                                        ? (result.testTitle || result.test?.title || 'Без названия')
+                                                        : (result.studentName || result.student?.name || 'Неизвестно')}
+                                                </td>
+                                                <td style={{ padding: '1rem', borderBottom: '1px solid #eee' }}>
+                                                    {result.completedAt ? new Date(result.completedAt).toLocaleString() : '-'}
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
+                                                    {hasScoreData
+                                                        ? `${result.score} / ${result.maxScore} (${percentage}%)`
+                                                        : `${result.correctAnswers || 0} / ${result.totalQuestions || 0} (${percentage}%)`}
+                                                </td>
+                                                <td style={{
+                                                    padding: '1rem',
+                                                    textAlign: 'center',
+                                                    borderBottom: '1px solid #eee',
+                                                    color: status.color,
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    {status.text}
+                                                </td>
+                                                <td style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #eee' }}>
+                                                    <Link
+                                                        to={user?.role === 'STUDENT'
+                                                            ? `/tests/result/${result.id}`
+                                                            : `/tests/teacher-result/${result.id}`}
+                                                        style={{
+                                                            backgroundColor: '#2196F3',
+                                                            color: 'white',
+                                                            padding: '0.5rem 1rem',
+                                                            borderRadius: '4px',
+                                                            textDecoration: 'none'
+                                                        }}
+                                                    >
+                                                        Подробнее
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ))
+                    )}
 
                     {user?.role === 'TEACHER' && test && results.length > 0 && (
                         <div style={{ marginTop: '1.5rem' }}>
