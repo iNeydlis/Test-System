@@ -16,10 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -70,6 +67,12 @@ public class AuthService {
                         .map(Subject::getName)
                         .collect(Collectors.toSet());
                 responseBuilder.subjectNames(subjectNames);
+            }
+            if (user.getTeachingGrades() != null && !user.getTeachingGrades().isEmpty()) {
+                List<String> teachingGradeNames = user.getTeachingGrades().stream()
+                        .map(Grade::getFullName)
+                        .collect(Collectors.toList());
+                responseBuilder.teachingGradeNames(teachingGradeNames);
             }
         }
         // Для ADMIN дополнительная информация не требуется

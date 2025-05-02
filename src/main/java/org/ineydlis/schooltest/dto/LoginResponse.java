@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -20,4 +22,5 @@ public class LoginResponse {
     private String gradeName; // Изменено: теперь это полное имя класса
     private Set<String> subjectNames; // Изменено: теперь это имена предметов
     private String profileImageUrl;
+    private List<String> teachingGradeNames;
 }
