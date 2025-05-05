@@ -35,8 +35,30 @@ const TeacherAdminStatisticsPage = () => {
                 const subjectsData = await api.get('/subjects');
                 const testsData = await api.get('/tests');
 
-                setGrades(gradesData);
-                setSubjects(subjectsData);
+                // Filter data for teachers based on their assigned subjects and grades
+                if (user.role === 'TEACHER') {
+                    // Filter subjects to only include those the teacher teaches
+                    const filteredSubjects = subjectsData.filter(subject =>
+                        user.subjectNames && user.subjectNames.includes(subject.name)
+                    );
+
+                    // Filter grades to only include those the teacher teaches
+                    const filteredGrades = gradesData.filter(grade =>
+                        user.teachingGradeNames && user.teachingGradeNames.includes(grade.fullName)
+                    );
+
+                    // For tests, we might need to filter based on subject and grade
+                    // This might require a more complex API call or additional filtering
+                    // For now, we'll keep all tests and filter them on the UI level
+
+                    setGrades(filteredGrades);
+                    setSubjects(filteredSubjects);
+                } else {
+                    // For admins, show all data
+                    setGrades(gradesData);
+                    setSubjects(subjectsData);
+                }
+
                 setTests(testsData);
 
                 // Fetch school-level statistics by default
@@ -62,7 +84,17 @@ const TeacherAdminStatisticsPage = () => {
 
             switch(selectedView) {
                 case 'school':
-                    data = await api.get('/statistics/school/top-students');
+                    // For teachers, we might want to limit this to their students only
+                    if (user.role === 'TEACHER') {
+                        // This endpoint might need to be updated on the backend to support teacher-specific filtering
+                        data = await api.get('/statistics/school/top-students', {
+                            params: {
+                                teacherId: user.id
+                            }
+                        });
+                    } else {
+                        data = await api.get('/statistics/school/top-students');
+                    }
                     break;
                 case 'subject':
                     if (selectedSubject) {
@@ -76,6 +108,8 @@ const TeacherAdminStatisticsPage = () => {
                     break;
                 case 'test':
                     if (selectedTest) {
+                        // For teachers, we might want to limit this to their tests only
+                        // This depends on how your API is structured
                         data = await api.get(`/statistics/test/${selectedTest}`);
                     }
                     break;
@@ -129,6 +163,32 @@ const TeacherAdminStatisticsPage = () => {
         if (percentage >= 75) return GRADE_COLORS.good;
         if (percentage >= 60) return GRADE_COLORS.average;
         return GRADE_COLORS.poor;
+    };
+
+    // Filter tests based on selected subject and grade for teachers
+    const getFilteredTests = () => {
+        if (user.role !== 'TEACHER' || !user.subjectNames || !user.teachingGradeNames) {
+            return tests;
+        }
+
+        // Since test data might not have direct subject/grade names like we need,
+        // we'll show all tests for now - ideally the backend would filter these
+        // Based on what's shown in the code, tests might not have subjectName/gradeName directly
+        return tests;
+
+        /* When the API provides these fields, you can uncomment this:
+        return tests.filter(test => {
+            // Check if test is associated with a subject that the teacher teaches
+            const isTeachersSubject = test.subjectName &&
+                user.subjectNames.includes(test.subjectName);
+
+            // Check if test is for a grade that the teacher teaches
+            const isTeachersGrade = test.gradeName &&
+                user.teachingGradeNames.includes(test.gradeName);
+
+            return isTeachersSubject && isTeachersGrade;
+        });
+        */
     };
 
     if (loading) {
@@ -279,7 +339,7 @@ const TeacherAdminStatisticsPage = () => {
                             style={selectStyle}
                         >
                             <option value="">Выберите тест</option>
-                            {tests.map(test => (
+                            {getFilteredTests().map(test => (
                                 <option key={test.id} value={test.id}>
                                     {test.title}
                                 </option>
