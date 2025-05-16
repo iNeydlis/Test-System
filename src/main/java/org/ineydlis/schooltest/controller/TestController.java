@@ -45,11 +45,10 @@ public class TestController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TestDto> createTest(
-            @RequestPart TestMultipartWrapper wrapper,
+            @RequestPart("test") TestCreateRequest request,  // Changed from TestMultipartWrapper wrapper
             @RequestPart(value = "referenceMaterials", required = false) MultipartFile referenceMaterials,
             @RequestHeader("Authorization") String token) {
 
-        TestCreateRequest request = wrapper.getTest();
         User currentUser = authService.getCurrentUser(token);
         if (currentUser.getRole() != UserRole.TEACHER && currentUser.getRole() != UserRole.ADMIN) {
             throw new RuntimeException("У вас нет прав на создание тестов");
