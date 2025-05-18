@@ -29,6 +29,7 @@ public interface TestRepository extends JpaRepository<Test, Long> {
     List<Test> findBySubjectInAndGradeId(@Param("subjects") Set<Subject> subjects, @Param("gradeId") Long gradeId);
 
     List<Test> findBySubjectId(Long subjectId);
+    List<Test> findTop10ByOrderByCreatedAtDesc();
 }
 
 

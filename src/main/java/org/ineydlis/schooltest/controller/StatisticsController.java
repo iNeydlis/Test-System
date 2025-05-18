@@ -4,10 +4,19 @@ import lombok.RequiredArgsConstructor;
 import org.ineydlis.schooltest.dto.StatisticViewDto;
 import org.ineydlis.schooltest.dto.TestResultDetailsDto;
 import org.ineydlis.schooltest.service.StatisticsService;
+import org.ineydlis.schooltest.service.ExcelExportService;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,6 +26,7 @@ import java.util.Map;
 public class StatisticsController {
 
     private final StatisticsService statisticsService;
+    private final ExcelExportService excelExportService;
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleException(RuntimeException ex) {
@@ -100,5 +110,57 @@ public class StatisticsController {
     public ResponseEntity<StatisticViewDto> getTopStudentsInSchool(
             @RequestHeader("Authorization") String token) {
         return ResponseEntity.ok(statisticsService.getTopStudentsInSchool(token));
+    }
+    /**
+     * Export all statistics to Excel file
+     */
+    @GetMapping("/export/excel")
+    public ResponseEntity<Resource> exportAllStatisticsToExcel(
+            @RequestHeader("Authorization") String token) {
+        try {
+            byte[] excelFile = excelExportService.generateCompleteStatisticsWorkbook(token);
+
+            ByteArrayResource resource = new ByteArrayResource(excelFile);
+
+            String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            String filename = URLEncoder.encode("Статистика_" + currentDate + ".xlsx",
+                    StandardCharsets.UTF_8.toString()).replace("+", "%20");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + filename)
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .contentLength(excelFile.length)
+                    .body(resource);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Ошибка при создании Excel файла: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Export student statistics to Excel file
+     */
+    @GetMapping("/export/student/{studentId}")
+    public ResponseEntity<Resource> exportStudentStatisticsToExcel(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long studentId) {
+        try {
+            byte[] excelFile = excelExportService.generateStudentStatisticsWorkbook(token, studentId);
+
+            ByteArrayResource resource = new ByteArrayResource(excelFile);
+
+            String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            String filename = URLEncoder.encode("Статистика_ученика_" + studentId + "_" + currentDate + ".xlsx",
+                    StandardCharsets.UTF_8.toString()).replace("+", "%20");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + filename)
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .contentLength(excelFile.length)
+                    .body(resource);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Ошибка при создании Excel файла: " + e.getMessage());
+        }
     }
 }
