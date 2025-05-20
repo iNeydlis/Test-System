@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import TestService from '../services/TestService';
+import './TestsList.css'; // Импортируем CSS файл
 
 const TestsList = () => {
     const [tests, setTests] = useState([]); // Initialize with empty array
@@ -104,7 +105,7 @@ const TestsList = () => {
                 <>
                     <h3>Активные тесты</h3>
                     {activeTests.length > 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                        <div className="tests-grid tests-container">
                             {activeTests.map(test => renderTestCard(test))}
                         </div>
                     ) : (
@@ -113,7 +114,7 @@ const TestsList = () => {
 
                     <h3>Неактивные тесты</h3>
                     {inactiveTests.length > 0 ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                        <div className="tests-grid">
                             {inactiveTests.map(test => renderTestCard(test))}
                         </div>
                     ) : (
@@ -125,7 +126,7 @@ const TestsList = () => {
 
         // For students, only show active tests
         return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+            <div className="tests-grid">
                 {testsArray
                     .filter(test => test.active !== false)
                     .map(test => renderTestCard(test))}
@@ -156,25 +157,12 @@ const TestsList = () => {
         return (
             <div
                 key={test.id}
-                style={{
-                    backgroundColor: 'white',
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-                    opacity: isActive ? 1 : 0.7,
-                    border: isActive ? 'none' : '1px solid #ccc'
-                }}
+                className={`test-card ${!isActive ? 'inactive' : ''}`}
             >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="card-header">
                     <h3>{test.title}</h3>
                     {!isActive && (
-                        <span style={{
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px'
-                        }}>
+                        <span className="inactive-badge">
                             Неактивен
                         </span>
                     )}
@@ -186,43 +174,21 @@ const TestsList = () => {
 
                 {/* Display reference materials information */}
                 {hasReferenceMaterials && (
-                    <div style={{
-                        backgroundColor: '#e3f2fd',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        marginTop: '8px',
-                        marginBottom: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                    }}>
+                    <div className="reference-materials">
                         <div>
-            <span style={{
-                color: '#1976D2',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center'
-            }}>
-                <span style={{ marginRight: '5px' }}>📄</span>
-                Справочные материалы
-            </span>
+                            <span className="reference-title">
+                                <span style={{ marginRight: '5px' }}>📄</span>
+                                Справочные материалы
+                            </span>
                             {test.referenceMaterialsFilename && (
-                                <span style={{ fontSize: '12px', color: '#555' }}>
-                    {test.referenceMaterialsFilename}
-                </span>
+                                <div className="reference-filename">
+                                    {test.referenceMaterialsFilename}
+                                </div>
                             )}
                         </div>
                         <button
                             onClick={() => handleViewReferenceMaterials(test.id)}
-                            style={{
-                                backgroundColor: '#1976D2',
-                                color: 'white',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                            }}
+                            className="button button-blue"
                         >
                             Просмотреть
                         </button>
@@ -231,49 +197,38 @@ const TestsList = () => {
 
                 {/* Добавленная информация для учеников */}
                 {user?.role === 'STUDENT' && (
-                    <>
-                        {user?.role === 'STUDENT' && (
-                            <>
-                                {test.bestScore !== undefined && test.bestScore !== null && test.bestScore !== '' ? (
-                                    <div>
-                                        <p style={{ color: '#1976D2', fontWeight: 'bold', fontSize: '16px', margin: '8px 0' }}>
-                                            <strong>Оценка:</strong> {calculateGrade(test.bestScore, test.maxScore)}
-                                        </p>
-                                        <p style={{ color: '#2E7D32', margin: '8px 0' }}>
-                                            <strong>Результат:</strong> {test.bestScore} из {test.maxScore || test.totalPoints} баллов
-                                            ({calculatePercentage(test.bestScore, test.maxScore)}%)
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <p style={{ color: '#1976D2', margin: '8px 0' }}>
-                                        <strong>Статус:</strong> Требуется пройти тест
-                                    </p>
-                                )}
-                                {test.maxAttempts !== undefined && (
-                                    <p style={{ margin: '8px 0' }}>
-                                        <strong>Попытки:</strong>{' '}
-                                        {test.remainingAttempts !== undefined
-                                            ? `${test.maxAttempts - test.remainingAttempts} из ${test.maxAttempts}`
-                                            : `${test.maxAttempts} максимум`}
-                                    </p>
-                                )}
-                            </>
+                    <div className="student-info">
+                        {test.bestScore !== undefined && test.bestScore !== null && test.bestScore !== '' ? (
+                            <div>
+                                <p className="score-info">
+                                    <strong>Оценка:</strong> {calculateGrade(test.bestScore, test.maxScore)}
+                                </p>
+                                <p className="result-info">
+                                    <strong>Результат:</strong> {test.bestScore} из {test.maxScore || test.totalPoints} баллов
+                                    ({calculatePercentage(test.bestScore, test.maxScore)}%)
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="status-info">
+                                <strong>Статус:</strong> Требуется пройти тест
+                            </p>
                         )}
-                    </>
+                        {test.maxAttempts !== undefined && (
+                            <p>
+                                <strong>Попытки:</strong>{' '}
+                                {test.remainingAttempts !== undefined
+                                    ? `${test.maxAttempts - test.remainingAttempts} из ${test.maxAttempts}`
+                                    : `${test.maxAttempts} максимум`}
+                            </p>
+                        )}
+                    </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                <div className="actions-container">
                     {user?.role === 'STUDENT' ? (
                         <Link
                             to={`/tests/${test.id}/take`}
-                            style={{
-                                backgroundColor: test.remainingAttempts > 0 && isActive ? '#2196F3' : '#9E9E9E',
-                                color: 'white',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '4px',
-                                textDecoration: 'none',
-                                cursor: test.remainingAttempts > 0 && isActive ? 'pointer' : 'not-allowed'
-                            }}
+                            className={`button ${test.remainingAttempts > 0 && isActive ? 'button-blue' : 'button-disabled'}`}
                             onClick={(e) => {
                                 if (test.remainingAttempts <= 0 || !isActive) {
                                     e.preventDefault();
@@ -289,96 +244,57 @@ const TestsList = () => {
                                 : (test.remainingAttempts > 0 ? 'Пройти тест' : 'Нет попыток')}
                         </Link>
                     ) : (
-                        <>
-                            <Link
-                                to={`/tests/${test.id}/results`}
-                                style={{
-                                    backgroundColor: '#2196F3',
-                                    color: 'white',
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '4px',
-                                    textDecoration: 'none'
-                                }}
-                            >
-                                Результаты
-                            </Link>
-                            <div>
-                                {isActive ? (
-                                    <>
-                                        <Link
-                                            to={`/tests/${test.id}/edit`}
-                                            style={{
-                                                backgroundColor: '#FFC107',
-                                                color: 'white',
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '4px',
-                                                textDecoration: 'none',
-                                                marginRight: '0.5rem'
-                                            }}
-                                        >
-                                            Редактировать
-                                        </Link>
-                                        <button
-                                            onClick={() => handleDeleteTest(test.id)}
-                                            style={{
-                                                backgroundColor: '#F44336',
-                                                color: 'white',
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Деактивировать
-                                        </button>
-                                    </>
-                                ) : (
-                                    <div>
-                                        <button
-                                            onClick={() => handleReactivateTest(test.id, false)}
-                                            style={{
-                                                backgroundColor: '#4CAF50',
-                                                color: 'white',
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                marginRight: '0.5rem'
-                                            }}
-                                        >
-                                            Активировать
-                                        </button>
-                                        <button
-                                            onClick={() => handleReactivateTest(test.id, true)}
-                                            style={{
-                                                backgroundColor: '#FF9800',
-                                                color: 'white',
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                marginRight: '0.5rem'
-                                            }}
-                                        >
-                                            Активировать и очистить
-                                        </button>
-                                        <button
-                                            onClick={() => handlePermanentDeleteTest(test.id)}
-                                            style={{
-                                                backgroundColor: '#B71C1C',
-                                                color: 'white',
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Удалить навсегда
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </>
+                        <div className="admin-buttons">
+                            {isActive ? (
+                                <>
+                                    <Link
+                                        to={`/tests/${test.id}/results`}
+                                        className="button button-blue"
+                                    >
+                                        Результаты
+                                    </Link>
+                                    <Link
+                                        to={`/tests/${test.id}/edit`}
+                                        className="button button-yellow"
+                                    >
+                                        Редактировать
+                                    </Link>
+                                    <button
+                                        onClick={() => handleDeleteTest(test.id)}
+                                        className="button button-red"
+                                    >
+                                        Деактивировать
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link
+                                        to={`/tests/${test.id}/results`}
+                                        className="button button-blue"
+                                    >
+                                        Результаты
+                                    </Link>
+                                    <button
+                                        onClick={() => handleReactivateTest(test.id, false)}
+                                        className="button button-green"
+                                    >
+                                        Активировать
+                                    </button>
+                                    <button
+                                        onClick={() => handleReactivateTest(test.id, true)}
+                                        className="button button-orange"
+                                    >
+                                        Активировать и очистить
+                                    </button>
+                                    <button
+                                        onClick={() => handlePermanentDeleteTest(test.id)}
+                                        className="button button-dark-red"
+                                    >
+                                        Удалить навсегда
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
@@ -390,18 +306,12 @@ const TestsList = () => {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div className="tests-header">
                 <h2>Список тестов</h2>
                 {(user?.role === 'TEACHER' || user?.role === 'ADMIN') && (
                     <Link
                         to="/tests/create"
-                        style={{
-                            backgroundColor: '#4CAF50',
-                            color: 'white',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '4px',
-                            textDecoration: 'none'
-                        }}
+                        className="create-button"
                     >
                         Создать новый тест
                     </Link>
