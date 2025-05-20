@@ -380,7 +380,7 @@ const TestTaking = () => {
                 marginBottom: '1.5rem'
             }}>
                 <div>
-                    <strong>Предмет:</strong> {test.subject}
+                    <strong>Предмет:</strong> {test.subjectName}
                 </div>
                 {timeLeft !== null && (
                     <div style={{
