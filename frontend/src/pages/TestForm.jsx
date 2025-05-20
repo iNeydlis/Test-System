@@ -1,7 +1,9 @@
+
 import React, {useState, useEffect, useContext} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TestService from '../services/TestService';
 import {AuthContext} from "../context/AuthContext.jsx";
+import './TestForm.css'; // Импортируем CSS файл
 
 const TestForm = () => {
     const { testId } = useParams();
@@ -485,31 +487,19 @@ const TestForm = () => {
     if (loading && isEditing) return <div>Загрузка теста...</div>;
 
     return (
-        <div>
-            <h2>{isEditing ? 'Редактирование теста' : 'Создание нового теста'}</h2>
+        <div className="test-form-container">
+            <h2 className="test-form-title">{isEditing ? 'Редактирование теста' : 'Создание нового теста'}</h2>
 
             {error && (
-                <div style={{
-                    backgroundColor: '#f8d7da',
-                    color: '#721c24',
-                    padding: '0.75rem',
-                    borderRadius: '4px',
-                    marginBottom: '1rem'
-                }}>
+                <div className="error-message">
                     {error}
                 </div>
             )}
 
             <form onSubmit={handleSubmit}>
-                <div style={{
-                    backgroundColor: 'white',
-                    padding: '2rem',
-                    borderRadius: '8px',
-                    boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-                    marginBottom: '1.5rem'
-                }}>
+                <div className="form-section">
                     <div className="form-group">
-                        <label htmlFor="title">Название теста *</label>
+                        <label className="form-label" htmlFor="title">Название теста *</label>
                         <input
                             id="title"
                             name="title"
@@ -522,7 +512,7 @@ const TestForm = () => {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="subjectId">Предмет *</label>
+                        <label className="form-label" htmlFor="subjectId">Предмет *</label>
                         <select
                             id="subjectId"
                             name="subjectId"
@@ -541,7 +531,7 @@ const TestForm = () => {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="description">Описание</label>
+                        <label className="form-label" htmlFor="description">Описание</label>
                         <textarea
                             id="description"
                             name="description"
@@ -553,8 +543,8 @@ const TestForm = () => {
                     </div>
 
                     {/* PDF File Upload */}
-                    <div className="form-group">
-                        <label htmlFor="referenceMaterials">Дополнительные материалы (PDF)</label>
+                    <div className="form-group file-upload-container">
+                        <label className="form-label" htmlFor="referenceMaterials">Дополнительные материалы (PDF)</label>
                         <input
                             id="referenceMaterials"
                             name="referenceMaterials"
@@ -563,24 +553,23 @@ const TestForm = () => {
                             onChange={handleFileChange}
                             className="form-control"
                         />
-                        <small className="form-text text-muted">
+                        <small className="form-text">
                             Загрузите PDF-файл с дополнительными материалами к тесту (максимум 10MB)
                         </small>
 
                         {fileError && (
-                            <div style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                            <div className="file-error">
                                 {fileError}
                             </div>
                         )}
 
                         {currentReferenceMaterialsName && !removeReferenceMaterials && (
-                            <div style={{ marginTop: '0.5rem' }}>
+                            <div className="current-file">
                                 <span>Текущий файл: {currentReferenceMaterialsName}</span>
                                 <button
                                     type="button"
                                     onClick={handleRemoveFile}
-                                    className="btn btn-sm btn-danger ml-2"
-                                    style={{ marginLeft: '10px' }}
+                                    className="btn btn-danger btn-sm"
                                 >
                                     Удалить
                                 </button>
@@ -588,13 +577,12 @@ const TestForm = () => {
                         )}
 
                         {referenceMaterials && (
-                            <div style={{ marginTop: '0.5rem' }}>
+                            <div className="current-file">
                                 <span>Выбран новый файл: {referenceMaterials.name}</span>
                                 <button
                                     type="button"
                                     onClick={handleRemoveFile}
-                                    className="btn btn-sm btn-danger ml-2"
-                                    style={{ marginLeft: '10px' }}
+                                    className="btn btn-danger btn-sm"
                                 >
                                     Отменить
                                 </button>
@@ -603,7 +591,7 @@ const TestForm = () => {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="timeLimit">Ограничение по времени (минуты)</label>
+                        <label className="form-label" htmlFor="timeLimit">Ограничение по времени (минуты)</label>
                         <input
                             id="timeLimit"
                             name="timeLimit"
@@ -617,7 +605,7 @@ const TestForm = () => {
 
                     {/* Added maxAttempts field */}
                     <div className="form-group">
-                        <label htmlFor="maxAttempts">Количество разрешенных попыток</label>
+                        <label className="form-label" htmlFor="maxAttempts">Количество разрешенных попыток</label>
                         <input
                             id="maxAttempts"
                             name="maxAttempts"
@@ -627,14 +615,14 @@ const TestForm = () => {
                             onChange={handleChange}
                             className="form-control"
                         />
-                        <small className="form-text text-muted">
+                        <small className="form-text">
                             Сколько раз студенты могут попытаться пройти этот тест
                         </small>
                     </div>
 
                     {/* Added questionsToShow field */}
                     <div className="form-group">
-                        <label htmlFor="questionsToShow">Количество отображаемых вопросов</label>
+                        <label className="form-label" htmlFor="questionsToShow">Количество отображаемых вопросов</label>
                         <input
                             id="questionsToShow"
                             name="questionsToShow"
@@ -645,18 +633,18 @@ const TestForm = () => {
                             onChange={handleChange}
                             className="form-control"
                         />
-                        <small className="form-text text-muted">
+                        <small className="form-text">
                             Оставьте пустым, чтобы показывать все вопросы. При указании значения вопросы будут выбираться случайным образом.
                         </small>
                     </div>
 
                     <div className="form-group">
-                        <label>Доступно для классов *</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+                        <label className="form-label">Доступно для классов *</label>
+                        <div className="grades-container">
                             {grades.length > 0 ? (
                                 grades.map(grade => (
-                                    <div key={grade.id} style={{ minWidth: '100px' }}>
-                                        <label>
+                                    <div key={grade.id} className="grade-checkbox">
+                                        <label className="checkbox-label">
                                             <input
                                                 type="checkbox"
                                                 value={grade.id}
@@ -675,39 +663,26 @@ const TestForm = () => {
                 </div>
 
                 <div>
-                    <h3>Вопросы</h3>
+                    <h3 className="section-title">Вопросы</h3>
 
                     {formData.questions.map((question, qIndex) => (
                         <div
                             key={qIndex}
-                            style={{
-                                backgroundColor: 'white',
-                                padding: '1.5rem',
-                                borderRadius: '8px',
-                                boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-                                marginBottom: '1.5rem'
-                            }}
+                            className="question-card"
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h4>Вопрос #{qIndex + 1}</h4>
+                            <div className="question-header">
+                                <h4 className="question-title">Вопрос #{qIndex + 1}</h4>
                                 <button
                                     type="button"
                                     onClick={() => removeQuestion(qIndex)}
-                                    style={{
-                                        backgroundColor: '#F44336',
-                                        color: 'white',
-                                        padding: '0.5rem',
-                                        borderRadius: '4px',
-                                        border: 'none',
-                                        cursor: 'pointer'
-                                    }}
+                                    className="btn btn-danger btn-sm"
                                 >
                                     Удалить вопрос
                                 </button>
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor={`question-${qIndex}`}>Текст вопроса *</label>
+                                <label className="form-label" htmlFor={`question-${qIndex}`}>Текст вопроса *</label>
                                 <textarea
                                     id={`question-${qIndex}`}
                                     value={question.text}
@@ -719,7 +694,7 @@ const TestForm = () => {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor={`question-type-${qIndex}`}>Тип вопроса</label>
+                                <label className="form-label" htmlFor={`question-type-${qIndex}`}>Тип вопроса</label>
                                 <select
                                     id={`question-type-${qIndex}`}
                                     value={question.type}
@@ -733,7 +708,7 @@ const TestForm = () => {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor={`question-points-${qIndex}`}>Количество баллов</label>
+                                <label className="form-label" htmlFor={`question-points-${qIndex}`}>Количество баллов</label>
                                 <input
                                     id={`question-points-${qIndex}`}
                                     type="number"
@@ -745,35 +720,27 @@ const TestForm = () => {
                             </div>
 
                             {question.type !== 'TEXT_ANSWER' ? (
-                                <div style={{ marginTop: '1rem' }}>
+                                <div className="answers-container">
                                     <h5>Варианты ответов</h5>
 
                                     {question.answers && question.answers.map((answer, aIndex) => (
                                         <div
                                             key={aIndex}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                marginBottom: '0.5rem',
-                                                padding: '0.5rem',
-                                                backgroundColor: '#f9f9f9',
-                                                borderRadius: '4px'
-                                            }}
+                                            className="answer-item"
                                         >
-                                            <div style={{ flex: 1 }}>
+                                            <div className="answer-text">
                                                 <input
                                                     type="text"
                                                     value={answer.text}
                                                     onChange={(e) => handleAnswerChange(qIndex, aIndex, 'text', e.target.value)}
                                                     placeholder="Текст ответа"
                                                     required
-                                                    style={{ width: '100%' }}
                                                     className="form-control"
                                                 />
                                             </div>
 
-                                            <div style={{ display: 'flex', alignItems: 'center', marginLeft: '1rem' }}>
-                                                <label style={{ marginRight: '0.5rem' }}>
+                                            <div className="answer-actions">
+                                                <label className="checkbox-label">
                                                     <input
                                                         type={question.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
                                                         name={`correct-answer-${qIndex}`}
@@ -802,15 +769,7 @@ const TestForm = () => {
                                                 <button
                                                     type="button"
                                                     onClick={() => removeAnswer(qIndex, aIndex)}
-                                                    style={{
-                                                        backgroundColor: '#F44336',
-                                                        color: 'white',
-                                                        padding: '0.25rem 0.5rem',
-                                                        borderRadius: '4px',
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                        fontSize: '0.8rem'
-                                                    }}
+                                                    className="btn btn-danger btn-sm"
                                                     disabled={question.answers.length <= 2}
                                                 >
                                                     Удалить
@@ -822,21 +781,13 @@ const TestForm = () => {
                                     <button
                                         type="button"
                                         onClick={() => addAnswer(qIndex)}
-                                        style={{
-                                            backgroundColor: '#2196F3',
-                                            color: 'white',
-                                            padding: '0.5rem',
-                                            borderRadius: '4px',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            marginTop: '0.5rem'
-                                        }}
+                                        className="btn btn-primary"
                                     >
                                         Добавить вариант ответа
                                     </button>
                                 </div>
                             ) : (
-                                <div style={{ marginTop: '1rem' }}>
+                                <div className="answers-container">
                                     <h5>Правильный ответ</h5>
                                     <input
                                         type="text"
@@ -854,10 +805,9 @@ const TestForm = () => {
                                             }));
                                         }}
                                         placeholder="Введите правильный ответ"
-                                        style={{ width: '100%' }}
                                         className="form-control"
                                     />
-                                    <p style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.9rem' }}>
+                                    <p className="form-text">
                                         Ответ студента будет проверяться на точное соответствие (без учета регистра)
                                     </p>
                                 </div>
@@ -868,32 +818,17 @@ const TestForm = () => {
                     <button
                         type="button"
                         onClick={addQuestion}
-                        style={{
-                            backgroundColor: '#4CAF50',
-                            color: 'white',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '4px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            marginBottom: '1.5rem'
-                        }}
+                        className="btn btn-success"
                     >
                         Добавить вопрос
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div className="form-buttons">
                     <button
                         type="button"
                         onClick={() => navigate('/tests')}
-                        style={{
-                            backgroundColor: '#9E9E9E',
-                            color: 'white',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '4px',
-                            border: 'none',
-                            cursor: 'pointer'
-                        }}
+                        className="btn btn-secondary"
                     >
                         Отмена
                     </button>
@@ -901,14 +836,7 @@ const TestForm = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        style={{
-                            backgroundColor: '#4CAF50',
-                            color: 'white',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '4px',
-                            border: 'none',
-                            cursor: 'pointer'
-                        }}
+                        className="btn btn-success"
                     >
                         {loading ? 'Сохранение...' : (isEditing ? 'Обновить тест' : 'Создать тест')}
                     </button>
