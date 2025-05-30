@@ -24,7 +24,42 @@ const TeacherAdminStatisticsPage = () => {
         average: '#F59E0B',   // Оранжевый
         poor: '#EF4444'       // Красный
     };
+    const exportToExcel = async () => {
+        try {
+            setLoading(true);
 
+            // Отправляем запрос к API с установкой правильных заголовков для получения файла
+            const response = await api.get('/statistics/export/excel', {
+                responseType: 'blob', // Важно для получения бинарных данных
+            });
+
+            // Создаем URL объект из полученных данных
+            const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+
+            // Создаем временную ссылку для скачивания файла
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Формируем имя файла со временем экспорта
+            const date = new Date();
+            const fileName = `statistics_export_${date.toISOString().slice(0, 10)}.xlsx`;
+            link.setAttribute('download', fileName);
+
+            // Имитируем клик для скачивания файла
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Освобождаем URL объект
+            window.URL.revokeObjectURL(url);
+
+            setLoading(false);
+        } catch (err) {
+            setError(err.message || 'Ошибка при экспорте данных');
+            setLoading(false);
+        }
+    };
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
@@ -244,7 +279,33 @@ const TeacherAdminStatisticsPage = () => {
                     </div>
                 )}
             </div>
-
+            <button
+                onClick={exportToExcel}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2 disabled:opacity-50"
+                disabled={loading}
+            >
+                {loading ? (
+                    <span>Загрузка...</span>
+                ) : (
+                    <>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                        </svg>
+                        <span>Экспорт в Excel</span>
+                    </>
+                )}
+            </button>
             <div style={sectionStyle}>
                 <h3 style={sectionTitleStyle}>Выбор статистики</h3>
 

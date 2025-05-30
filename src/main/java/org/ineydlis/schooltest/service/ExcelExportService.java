@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -42,20 +43,21 @@ public class ExcelExportService {
 
         // Create workbook
         try (Workbook workbook = new XSSFWorkbook()) {
-            // Create styles for headers
+            // Create styles for headers and dates
             CellStyle headerStyle = createHeaderStyle(workbook);
+            CellStyle dateStyle = createDateStyle(workbook);
 
             // Add top students sheet
-            addTopStudentsSheet(workbook, headerStyle, token);
+            addTopStudentsSheet(workbook, headerStyle, dateStyle, token);
 
             // Add grade statistics sheets
-            addGradeStatisticsSheets(workbook, headerStyle, token);
+            addGradeStatisticsSheets(workbook, headerStyle, dateStyle, token);
 
             // Add subject statistics sheets
-            addSubjectStatisticsSheets(workbook, headerStyle, token);
+            addSubjectStatisticsSheets(workbook, headerStyle, dateStyle, token);
 
             // Add test statistics sheets (limiting to avoid too many sheets)
-            addTestStatisticsSheets(workbook, headerStyle, token);
+            addTestStatisticsSheets(workbook, headerStyle, dateStyle, token);
 
             // Write to byte array
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -75,6 +77,7 @@ public class ExcelExportService {
 
         try (Workbook workbook = new XSSFWorkbook()) {
             CellStyle headerStyle = createHeaderStyle(workbook);
+            CellStyle dateStyle = createDateStyle(workbook);
 
             // Add student overall performance sheet
             Map<String, StatisticViewDto> performance = statisticsService.getStudentOverallPerformance(token, studentId);
@@ -117,9 +120,8 @@ public class ExcelExportService {
                     headerRow.createCell(2).setCellValue("Максимум баллов");
                     headerRow.createCell(3).setCellValue("Процент");
                     headerRow.createCell(4).setCellValue("Дата выполнения");
-                    headerRow.createCell(5).setCellValue("Номер попытки");
 
-                    for (int i = 0; i <= 5; i++) {
+                    for (int i = 0; i <= 4; i++) {
                         headerRow.getCell(i).setCellStyle(headerStyle);
                     }
 
@@ -132,12 +134,18 @@ public class ExcelExportService {
                         dataRow.createCell(1).setCellValue(test.getScore());
                         dataRow.createCell(2).setCellValue(test.getMaxScore());
                         dataRow.createCell(3).setCellValue(test.getPercentage() + "%");
-                        dataRow.createCell(4).setCellValue(test.getCompletedAt());
-                        dataRow.createCell(5).setCellValue(test.getAttemptNumber());
+
+                        // Set date with proper formatting
+                        Cell dateCell = dataRow.createCell(4);
+                        if (test.getCompletedAt() != null) {
+                            setDateValue(dateCell, test.getCompletedAt(), dateStyle);
+                        } else {
+                            dateCell.setCellValue("Н/Д");
+                        }
                     }
 
                     // Auto-size columns
-                    for (int i = 0; i <= 5; i++) {
+                    for (int i = 0; i <= 4; i++) {
                         sheet.autoSizeColumn(i);
                     }
                 }
@@ -170,7 +178,39 @@ public class ExcelExportService {
         return headerStyle;
     }
 
-    private void addTopStudentsSheet(Workbook workbook, CellStyle headerStyle, String token) {
+    private CellStyle createDateStyle(Workbook workbook) {
+        CellStyle dateStyle = workbook.createCellStyle();
+        CreationHelper createHelper = workbook.getCreationHelper();
+        dateStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd.MM.yyyy HH:mm"));
+        dateStyle.setBorderBottom(BorderStyle.THIN);
+        dateStyle.setBorderTop(BorderStyle.THIN);
+        dateStyle.setBorderLeft(BorderStyle.THIN);
+        dateStyle.setBorderRight(BorderStyle.THIN);
+        return dateStyle;
+    }
+
+    private void setDateValue(Cell cell, Object dateValue, CellStyle dateStyle) {
+        if (dateValue instanceof Date) {
+            cell.setCellValue((Date) dateValue);
+            cell.setCellStyle(dateStyle);
+        } else if (dateValue instanceof String) {
+            // Если дата приходит как строка, попробуем её распарсить
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                Date date = sdf.parse((String) dateValue);
+                cell.setCellValue(date);
+                cell.setCellStyle(dateStyle);
+            } catch (Exception e) {
+                // Если не удалось распарсить, записываем как строку
+                cell.setCellValue((String) dateValue);
+            }
+        } else {
+            // Для других типов записываем как строку
+            cell.setCellValue(dateValue != null ? dateValue.toString() : "Н/Д");
+        }
+    }
+
+    private void addTopStudentsSheet(Workbook workbook, CellStyle headerStyle, CellStyle dateStyle, String token) {
         StatisticViewDto topStudents = statisticsService.getTopStudentsInSchool(token);
 
         Sheet sheet = workbook.createSheet("Лучшие ученики");
@@ -222,7 +262,7 @@ public class ExcelExportService {
         }
     }
 
-    private void addGradeStatisticsSheets(Workbook workbook, CellStyle headerStyle, String token) {
+    private void addGradeStatisticsSheets(Workbook workbook, CellStyle headerStyle, CellStyle dateStyle, String token) {
         List<Grade> allGrades = gradeRepository.findAll();
 
         for (Grade grade : allGrades) {
@@ -285,7 +325,7 @@ public class ExcelExportService {
         }
     }
 
-    private void addSubjectStatisticsSheets(Workbook workbook, CellStyle headerStyle, String token) {
+    private void addSubjectStatisticsSheets(Workbook workbook, CellStyle headerStyle, CellStyle dateStyle, String token) {
         List<Subject> allSubjects = subjectRepository.findAll();
 
         for (Subject subject : allSubjects) {
@@ -350,7 +390,7 @@ public class ExcelExportService {
         }
     }
 
-    private void addTestStatisticsSheets(Workbook workbook, CellStyle headerStyle, String token) {
+    private void addTestStatisticsSheets(Workbook workbook, CellStyle headerStyle, CellStyle dateStyle, String token) {
         // Get most recent 10 tests to avoid too many sheets
         List<Test> recentTests = testRepository.findTop10ByOrderByCreatedAtDesc();
 
@@ -390,9 +430,8 @@ public class ExcelExportService {
                 headerRow.createCell(4).setCellValue("Максимум баллов");
                 headerRow.createCell(5).setCellValue("Процент");
                 headerRow.createCell(6).setCellValue("Дата выполнения");
-                headerRow.createCell(7).setCellValue("Номер попытки");
 
-                for (int i = 0; i <= 7; i++) {
+                for (int i = 0; i <= 6; i++) {
                     headerRow.getCell(i).setCellStyle(headerStyle);
                 }
 
@@ -408,22 +447,17 @@ public class ExcelExportService {
                     dataRow.createCell(4).setCellValue(student.getMaxScore());
                     dataRow.createCell(5).setCellValue(student.getAveragePercentage() + "%");
 
-                    // Handle date if available
+                    // Handle date with proper formatting
+                    Cell dateCell = dataRow.createCell(6);
                     if (student.getCompletedAt() != null) {
-                        dataRow.createCell(6).setCellValue(student.getCompletedAt());
+                        setDateValue(dateCell, student.getCompletedAt(), dateStyle);
                     } else {
-                        dataRow.createCell(6).setCellValue("Н/Д");
-                    }
-
-                    if (student.getCompletedAt() != null) {
-                        dataRow.createCell(6).setCellValue(student.getCompletedAt());
-                    } else {
-                        dataRow.createCell(6).setCellValue("Н/Д");
+                        dateCell.setCellValue("Н/Д");
                     }
                 }
 
                 // Auto-size columns
-                for (int i = 0; i <= 7; i++) {
+                for (int i = 0; i <= 6; i++) {
                     sheet.autoSizeColumn(i);
                 }
             } catch (Exception e) {
